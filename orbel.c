@@ -79,7 +79,7 @@ double orbel_flon(double e, double capn)
         goto orbel_flon_normal_ret;
     }
 
-    for (int i = 1; i < IMAX; i++)
+    for (int i = 0; i < IMAX; i++)
     {
         x2 = x * x;
         f = a0 + x * (a1 + x2 * (a3 + x2 * (a5 + x2 * (a7 + x2 * (a9 + x2 * (a11 + x2))))));
@@ -104,6 +104,7 @@ double orbel_flon(double e, double capn)
         orbel_flon_out = -orbel_flon_out;
         capn = -capn;
     }
+
     // Print out diagnostic information regarding non-convergence state
     fputs("FLON : RETURNING WITHOUT COMPLETE CONVERGENCE\n", stderr);
     diff = e * sinh(orbel_flon_out) - orbel_flon_out - capn;
@@ -114,6 +115,7 @@ double orbel_flon(double e, double capn)
 
     // Normal return here, but check if capn was originally negative
 orbel_flon_normal_ret:
+
     if (iflag == 1)
     {
         orbel_flon_out = -orbel_flon_out;
@@ -121,4 +123,77 @@ orbel_flon_normal_ret:
     }
 
     return orbel_flon_out;
+}
+
+double orbel_fhybrid(double e, double n)
+{
+    double abn;
+    double orbel_fhybrid_out = 0.0;
+
+    abn = n;
+
+    if (n < 0.0)
+    {
+        abn = -abn;
+    }
+
+    if (abn < 0.6360 * e - 0.60)
+    {
+        orbel_fhybrid_out = orbel_flon(e, n);
+    } else {
+        orbel_fhybrid_out = orbel_fget(e, n);
+    }
+
+    return orbel_fhybrid_out;
+}
+
+double orbel_fget(double e, double capn)
+{
+    int IMAX = 10;
+    double tmp, x, shx, chx;
+    double esh, ech, f, fp, fpp, fppp, dx;
+    double orbel_fget_out = 0.0;
+
+    // Function to solve "Kepler's eqn" for F (here called x) for given e and CAPN
+
+    // begin with a guess proposed by Danby
+    if (capn < 0.0)
+    {
+        tmp = -2.0 * capn / e + 1.80;
+        x = -log(tmp);
+    } else {
+        tmp = +2.0 * capn / e + 1.80;
+        x = log(tmp);
+    }
+
+    orbel_fget_out = x;
+
+    for (int i = 0; i < IMAX; i++)
+    {
+        // Replace MCO_SINH with direct calls since subroutines are annoying
+        shx = sinh(x);
+        chx = sqrt(1.0 + shx * shx);
+        esh = e * shx;
+        ech = e * chx;
+        f = esh - x - capn;
+        // write(6,*) 'i,x,f : ',i,x,f
+        fp = ech - 1.0;
+        fpp = esh ;
+        fppp = ech ;
+        dx = -f / fp;
+        dx = -f / (fp + dx * fpp / 2.0);
+        dx = -f / (fp + dx * fpp / 2.0 + dx * dx * fppp / 6.0);
+        orbel_fget_out = x + dx;
+
+        // If we have converged here there's no point in going on
+        if (fabs(dx) < TINY)
+        {
+            return orbel_fget_out;
+        }
+
+        x = orbel_fget_out;
+    }
+
+    fputs("FGET : RETURNING WITHOUT COMPLETE CONVERGENCE", stderr);
+    return orbel_fget_out;
 }

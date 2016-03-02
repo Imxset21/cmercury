@@ -38,4 +38,7 @@
 #define DEGRAD 180.0 / PI
 #endif
 
+//! Macro for DSIGN in FORTRAN77: If B >= 0 then the result is ABS(A), else it is -ABS(A). 
+#define DSIGN(A, B) B >= 0 ? fabs(A) : -fabs(A)
+
 #endif /* CONFIG_H */

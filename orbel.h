@@ -10,14 +10,6 @@
 
 #include "config.h"
 
-//! Loop limits in the Laguerre attempts
-#ifndef NLAG1
-#define NLAG1 50
-#endif
-#ifndef NLAG2
-#define NLAG2 400
-#endif
-
 /**
  * @brief Solves the equivalent of Kepler's eqn. for a parabola given Q (Fitz. notation.)
  * @param q parabola mean anomaly as a real scalar

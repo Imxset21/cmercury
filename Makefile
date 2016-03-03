@@ -11,6 +11,7 @@ GCC := gcc
 CFLAGS := -std=c99 -Wall -Wextra -Wpedantic
 
 ifdef DEBUG
+CFLAGS += -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wshadow -Wuninitialized
 CFLAGS += -Og -g3 -DDEBUG
 else
 CFLAGS += -march=x86-64 -O2 -DNDEBUG

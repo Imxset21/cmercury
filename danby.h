@@ -57,13 +57,11 @@ struct cvals
   * (as indicated by a non-zero return value).
   */
 extern int drift_one(
-    const int nbod,
-    double* mass,
     struct jacobi_coord *initial_pos,
     struct jacobi_coord *vbles,
     const double mu,
     const double dt)
-    __attribute__((nonnull(2, 3, 4)));
+    __attribute__((nonnull(1, 2)));
 
 /**
   * @brief Function for the calculation of stumpff functions
@@ -236,8 +234,6 @@ extern void drift_kepmd(
 
 /**
  * @brief Performs the Danby and decides which vbles to use
- * @param[in] nbod number of massive bodies (int scalar)
- * @param[in] mass mass of bodies (real array)
  * @param[in] dt0 time step
  * @param[in,out] position initial, final position in jacobi coord (real scalars)
  * @param[in,out] vbles initial, final position in jacobi coord (real scalars)
@@ -246,12 +242,10 @@ extern void drift_kepmd(
  * @date April 6/93 - MD adds dt and keeps dt0 unchanged
  */
 extern int drift_dan(
-    const int nbod,
-    double* mass,
-    struct jacobi_coord *position,
+    struct jacobi_coord *pos,
     struct jacobi_coord *vbles,
     const double mu,
-    const double dt)
-    __attribute__((nonnull(2, 3, 4)));
+    const double dt0)
+    __attribute__((nonnull(1, 2)));
 
 #endif /* DANBY_H */

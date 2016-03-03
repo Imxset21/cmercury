@@ -2,21 +2,20 @@
 #include "config.h"
 #include <math.h>
 
-int drift_one(const int nbod,
-              double* mass,
-              struct jacobi_coord *initial_pos,
-              struct jacobi_coord *vbles,
-              const double mu,
-              const double dt)
+int drift_one(
+    struct jacobi_coord *initial_pos,
+    struct jacobi_coord *vbles,
+    const double mu,
+    const double dt)
 {
-    int iflg = drift_dan(mu, initial_pos, vbles, dt);
+    int iflg = drift_dan(initial_pos, vbles, mu, dt);
 
     if (iflg)
     {
         for (int i = 1; i <= 10; i++)
         {
             double dttmp = dt / 10.0;
-            iflg = drift_dan(mu, initial_pos, vbles, dttmp);
+            iflg = drift_dan(initial_pos, vbles, mu, dttmp);
 
             if (iflg)
             {
@@ -33,19 +32,18 @@ void drift_kepu_stumpff(double x,
                         struct cvals *cvals)
 {
     int n = 0;
-    double xm = 0.1, x2, x3, x4, x5, x6;
 
-    while (fabs(x) > xm)
+    while (fabs(x) > 0.1)
     {
-        n = n + 1;
+        n++;
         x = x * .25;
     }
 
-    x2 = x  * x;
-    x3 = x  * x2;
-    x4 = x2 * x2;
-    x5 = x2 * x3;
-    x6 = x3 * x3;
+    const double x2 = x  * x;
+    const double x3 = x  * x2;
+    const double x4 = x2 * x2;
+    const double x5 = x2 * x3;
+    const double x6 = x3 * x3;
 
     cvals->c2 = 1.147074559772972 - 11 * x6 - 2.087675698786810 - 9 * x5
                 + 2.755731922398589 - 7 * x4  - 2.480158730158730 - 5 * x3
@@ -81,20 +79,19 @@ int drift_kepu_p3solve(const double dt,
                        const double u,
                        double *s)
 {
-    double denom, a0, a1, a2, q, r, sq2;
+    const double denom = (mu - alpha * r0) / 6.0;
+    const double a2 = 0.5 * u / denom;
+    const double a1 = r0 / denom;
+    const double a0 = -dt / denom;
 
-    denom = (mu - alpha * r0) / 6.0;
-    a2 = 0.5 * u / denom;
-    a1 = r0 / denom;
-    a0 = -dt / denom;
-
-    q = (a1 - a2 * a2 / 3.0) / 3.0;
-    r = (a1 * a2 - 3.0 * a0) / 6.0 - (pow(a2, 3)) / 27.0;
-    sq2 = pow(q, 3) + pow(r, 2);
+    const double q = (a1 - a2 * a2 / 3.0) / 3.0;
+    const double r = (a1 * a2 - 3.0 * a0) / 6.0 - (pow(a2, 3)) / 27.0;
+    const double sq2 = pow(q, 3) + pow(r, 2);
 
     if (sq2 >= 0.0)
     {
-        double sq = sqrt(sq2), p2, p1;
+        const double sq = sqrt(sq2);
+        double p2 = 0.0, p1 = 0.0;
 
         if ((r + sq) <= 0.0)
         {
@@ -171,17 +168,11 @@ int drift_kepu_lag(double *s,
                    double *fp,
                    struct cvals *cvals)
 {
-    int ncmax;
     double _s = *s, _fp = *fp;
 
     // const int NTMP = NLAG2 + 1;
     // To get close approch needed to take lots of iterations if alpha < 0
-    if (alpha < 0.0)
-    {
-        ncmax = NLAG2;
-    } else {
-        ncmax = NLAG2;
-    }
+    const int ncmax = (alpha < 0.0) ? NLAG2 : NLAG2;
 
     const double ln = 5.0;
 
@@ -216,22 +207,11 @@ int drift_kepu_lag(double *s,
     return 2;
 }
 
-static inline void mco_sine(double x, double *sx, double *cx)
+static inline void mco_sine(double *x, double *sx, double *cx)
 {
-    if (x > 0)
-    {
-        x = remainder(x, TWOPI);
-    } else {
-        x = remainder(x, TWOPI) + TWOPI;
-    }
-
-    *cx = cos(x);
-
-    if (x > PI) {
-        *sx = -sqrt(1.0 - (*cx **cx));
-    } else {
-        *sx = sqrt(1.0 - (*cx **cx));
-    }
+    *x = (*x > 0) ? remainder(*x, TWOPI) : remainder(*x, TWOPI) + TWOPI;
+    *cx = cos(*x);
+    *sx = (*x > PI) ? -sqrt(1.0 - (*cx **cx)) : sqrt(1.0 - (*cx **cx));
 }
 
 double drift_kepu_guess(
@@ -255,10 +235,10 @@ double drift_kepu_guess(
             const double ec = 1.0 - r0 / a;
             const double es = u / (en * a * a);
             const double e = sqrt(ec * ec + es * es);
-            const double y = en * dt - es;
+            double y = en * dt - es;
 
             double sy = 0.0, cy = 0.0;
-            mco_sine(y, &sy, &cy);
+            mco_sine(&y, &sy, &cy);
 
             const double sigma = DSIGN(1.0, (es * cy + ec * sy));
             const double x = y + sigma * 0.85 * e;
@@ -374,4 +354,109 @@ void drift_kepmd(
 
     *x = _x, *sx = _sx, *cx = _cx;
     return;
+}
+
+int drift_dan(
+    struct jacobi_coord *pos,
+    struct jacobi_coord *vbles,
+    const double mu,
+    const double dt0)
+{
+    int iflg;
+
+    struct cvals my_cvals = {0.0, 0.0, 0.0};
+    double x,y,z,vx,vy,vz;
+    double f,g,fdot;
+    double gdot;
+    double u,alpha,fp,r0,v0s;
+    double a,asq,en;
+    double dm,ec,es,esq,xkep;
+    double fchk,s,c;
+
+    // Set dt = dt0 to be sure timestep is not altered while solving for new coords.
+	double dt = dt0;
+	iflg = 0;
+    r0 = sqrt(pos->x*pos->x + pos->y*pos->y + pos->z*pos->z);
+    v0s = vbles->x*vbles->x + vbles->y*vbles->y + vbles->z*vbles->z;
+    u = pos->x*vbles->x + pos->y*vbles->y + pos->z*vbles->z;
+    alpha = 2.0*mu/r0 - v0s;
+        
+	if (alpha > 0.0)
+    {
+        a = mu/alpha;
+        asq = a*a;
+        en = sqrt(mu/(a*asq));
+        ec = 1.0 - r0/a;
+        es = u/(en*asq);
+        esq = ec*ec + es*es;
+        dm = dt*en - (int) (dt * en / TWOPI) * TWOPI;
+        dt = dm/en;
+        if ((dm*dm > 0.16) || (esq > 0.36))
+        {
+            goto calc_drift_kepyu;
+        }
+
+        if (esq*dm*dm < 0.0016)
+        {
+           drift_kepmd(dm, es, ec, &xkep, &s, &c);
+	       fchk = (xkep - ec*s +es*(1.-c) - dm);
+
+	       if(fchk*fchk > DANBYB)
+           {
+               iflg = 1;
+               return iflg;
+           }
+
+           fp = 1. - ec*c + es*s;
+           f = (a/r0) * (c-1.) + 1.;
+           g = dt + (s-xkep)/en;
+           fdot = - (a/(r0*fp))*en*s;
+           gdot = (c-1.)/fp + 1.;
+
+           x = pos->x*f + vbles->x*g;
+           y = pos->y*f + vbles->y*g;
+           z = pos->z*f + vbles->z*g;
+           vx = pos->x*fdot + vbles->x*gdot;
+           vy = pos->y*fdot + vbles->y*gdot;
+           vz = pos->z*fdot + vbles->z*gdot;
+
+           pos->x = x;
+           pos->y = y;
+           pos->z = z;
+           vbles->x = vx;
+           vbles->y = vy;
+           vbles->z = vz;
+
+	       iflg = 0;
+	       return iflg;
+
+        }
+    }
+             
+calc_drift_kepyu:
+    drift_kepu(dt,r0,mu,alpha,u, &fp, &my_cvals);
+
+    if (iflg == 0)
+    {
+        f = 1.0 - (mu/r0)*my_cvals.c2;
+        g = dt - mu*my_cvals.c3;
+        fdot = -(mu/(fp*r0))*my_cvals.c1;
+        gdot = 1. - (mu/fp)*my_cvals.c2;
+
+        x = pos->x*f + vbles->x*g;
+        y = pos->y*f + vbles->y*g;
+        z = pos->z*f + vbles->z*g;
+        vx = pos->x*fdot + vbles->x*gdot;
+        vy = pos->y*fdot + vbles->y*gdot;
+        vz = pos->z*fdot + vbles->z*gdot;
+
+        pos->x = x;
+        pos->y = y;
+        pos->z = z;
+        vbles->x = vx;
+        vbles->y = vy;
+        vbles->z = vz;
+	}
+    
+    return iflg;
 }

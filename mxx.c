@@ -43,9 +43,9 @@ static int compare_doubles(const void* a, const void* b)
     return 0;
 }
 
-int* mxx_sort(double *arr, int arr_size)
+int* mxx_sort(double *arr, size_t arr_size)
 {
-    if (arr_size < 0 || arr == NULL)
+    if (arr == NULL)
     {
         fputs("mxx_sort: invalid array size or invalid array\n", stderr);
         return NULL;
@@ -56,7 +56,7 @@ int* mxx_sort(double *arr, int arr_size)
     if (index_arr == NULL)
     {
         fprintf(stderr,
-                "mxx_sort: unable to allocate index array of size %d\n",
+                "mxx_sort: unable to allocate index array of size %lu\n",
                 arr_size);
         return NULL;
     }
@@ -66,7 +66,7 @@ int* mxx_sort(double *arr, int arr_size)
     if (copy_of_arr == NULL)
     {
         fprintf(stderr,
-                "mxx_sort: unable to allocate copy array of size %d\n",
+                "mxx_sort: unable to allocate copy array of size %lu\n",
                 arr_size);
         free(index_arr);
         return NULL;
@@ -77,7 +77,7 @@ int* mxx_sort(double *arr, int arr_size)
     qsort(arr, arr_size, sizeof(double), compare_doubles);
 
     // Find the new indicies of the elements in the new array
-    for (int i = 0; i < arr_size; i++)
+    for (size_t i = 0; i < arr_size; i++)
     {
         // Find the address of the value at i (in our 'old' array)
         const double* val_addr = bsearch(
@@ -88,7 +88,7 @@ int* mxx_sort(double *arr, int arr_size)
                                      compare_doubles);
         // Use some pointer arithmetic to calculate its index in the new array
         const ptrdiff_t diff = val_addr - arr;
-        index_arr[i] = diff;
+        index_arr[i] = (int) diff;
     }
 
     free(copy_of_arr);
@@ -119,7 +119,7 @@ double* mxx_jac(
     }
 
     // Convert to barycentric coordinates and velocities
-    mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, iflag, &itmp);
+    iflag = mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, &itmp);
 
     dx = x[1][0] - x[0][0];
     dy = x[1][1] - x[0][1];
@@ -153,7 +153,7 @@ double mxx_en(
     double **s,
     double *e)
 {
-    int iflag, itmp[8] = {0};
+    int iflag = 0, itmp[8] = {0};
     double x[NMAX][3], v[NMAX][3], l[3] = {0.0};
     double temp = 0.0, dx = 0.0, dy = 0.0, dz = 0.0, r2 = 0.0, ke = 0.0, pe = 0.0;
     double r_1 = 0.0, r_2 = 0.0, r_4 = 0.0, r_6 = 0.0, u2 = 0.0, u4 = 0.0, u6 = 0.0;
@@ -166,7 +166,7 @@ double mxx_en(
     pe = 0.0;
 
     // Convert to barycentric coordinates and velocities
-    mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, iflag, &itmp);
+    iflag = mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, &itmp);
 
     // Do the spin angular momenta first (probably the smallest terms)
     for (int j = 0; j < nbod; j++)

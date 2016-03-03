@@ -8,6 +8,8 @@
 #ifndef MXX_H
 #define MXX_H
 
+#include <stddef.h>
+
 /**
  * Synchronizes the epochs of NBIG Big bodies (having a common epoch) and
  * NBOD-NBIG Small bodies (possibly having differing epochs), for an integration
@@ -41,7 +43,7 @@ extern void mxx_sync(
 /**
  * @brief Sorts an array in-place, returning an array of new indices of elements
  */
-extern int* mxx_sort(double *arr, int arr_size);
+extern int* mxx_sort(double *arr, size_t arr_size);
 
 /**
  * @brief Calculates the Jacobi constant for massless particles

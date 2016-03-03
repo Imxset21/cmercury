@@ -33,17 +33,17 @@ void mxx_sync(
     return;
 }
 
-static int compare_doubles(const void* a, const void* b)
+static int compare_doubles(const void *restrict a, const void *restrict b)
 {
-    double arg1 = *(const double*)a;
-    double arg2 = *(const double*)b;
+    double arg1 = *(const double *restrict) a;
+    double arg2 = *(const double *restrict) b;
 
     if (arg1 < arg2) return -1;
     if (arg1 > arg2) return 1;
     return 0;
 }
 
-int* mxx_sort(double *arr, size_t arr_size)
+int* mxx_sort(double *restrict arr, const size_t arr_size)
 {
     if (arr == NULL)
     {

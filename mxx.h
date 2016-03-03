@@ -43,7 +43,7 @@ extern void mxx_sync(
 /**
  * @brief Sorts an array in-place, returning an array of new indices of elements
  */
-extern int* mxx_sort(double *arr, size_t arr_size);
+extern int* mxx_sort(double *restrict arr, const size_t arr_size);
 
 /**
  * @brief Calculates the Jacobi constant for massless particles

@@ -63,6 +63,21 @@
 #define NFILES 50
 #endif
 
+//! Gaussian gravitational constant squared
+#ifndef K2
+#define K2 2.959122082855911e-4
+#endif
+
+//! Astronomical unit in cm
+#ifndef AU
+#define AU 1.4959787e13
+#endif
+
+//! Mass of the Sun in g
+#ifndef MSUN
+#define MSUN 1.9891e33
+#endif
+
 //! Macro for DSIGN in FORTRAN77: If B >= 0 then the result is ABS(A), else it is -ABS(A). 
 #define DSIGN(A, B) B >= 0 ? fabs(A) : -fabs(A)
 

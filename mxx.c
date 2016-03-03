@@ -23,7 +23,7 @@ void mxx_sync(
     double *rho,
     double *rceh,
     int *stat,
-    char *id,
+    char **id,
     double *epoch,
     double *ngf,
     int opt[8],
@@ -35,8 +35,8 @@ void mxx_sync(
 
 static int compare_doubles(const void *restrict a, const void *restrict b)
 {
-    double arg1 = *(const double *restrict) a;
-    double arg2 = *(const double *restrict) b;
+    double arg1 = *(const double * restrict) a;
+    double arg2 = *(const double * restrict) b;
 
     if (arg1 < arg2) return -1;
     if (arg1 > arg2) return 1;
@@ -242,4 +242,171 @@ double mxx_en(
     *e = _e;
 
     return sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
+}
+
+void mxx_elim(
+    int *nbod,
+    int *nbig,
+    double *m,
+    double **x,
+    double **v,
+    double **s,
+    double *rho,
+    double *rceh,
+    double **ngf,
+    double *stat,
+    char **id,
+    char mem[NMESS],
+    int lmem[NMESS],
+    FILE *outfile)
+{
+    int elim[NMAX] = {0};
+
+    // Find out how many objects are to be removed
+    int nelim = 0;
+    int nbigelim = 0;
+    for(int j = 1; j < *nbod; j++)
+    {
+        if (stat[j] < 0)
+        {
+            elim[nelim] = j;
+            nelim++;
+            if (j <= *nbig)
+            {
+                nbigelim++;
+            }
+        }
+    }
+    elim[nelim] = *nbod + 1;
+
+    // Eliminate unwanted objects
+    for(int k = 0; k < nelim; k++)
+    {
+        for(int j = elim[k] - k;  j < elim[k + 1] - k; j++)
+        {
+            const int l = j + k;
+            x[j][0] = x[l][0];
+            x[j][1] = x[l][1];
+            x[j][2] = x[l][2];
+            v[j][0] = v[l][0];
+            v[j][1] = v[l][1];
+            v[j][2] = v[l][2];
+            m[j]   = m[l];
+            s[j][0] = s[l][0];
+            s[j][1] = s[l][1];
+            s[j][2] = s[l][2];
+            rho[j] = rho[l];
+            rceh[j] = rceh[l];
+            stat[j] = stat[l];
+            strncpy(id[j], id[l], sizeof(char) * 8);
+            ngf[j][0] = ngf[l][0];
+            ngf[j][1] = ngf[l][1];
+            ngf[j][2] = ngf[l][2];
+            ngf[j][3] = ngf[l][3];
+        }
+    }
+    // Update total number of bodies and number of Big bodies
+    *nbod -= nelim;
+    *nbig -= nbigelim;
+
+    // If no massive bodies remain, stop the integration
+    if (*nbig < 1)
+    {
+        puts("Simulation concluded - no massive bodies remain.\n");
+        // TODO: Write simulation results to outfile
+        // open (23,file=outfile,status='old',access='append',err=10)
+        // write (23,'(2a)') mem(81)(1:lmem(81)),mem(124)(1:lmem(124))
+        fclose(outfile);
+        exit(EXIT_SUCCESS);
+    }
+}
+
+int mxx_ejec(
+    double time,
+    double tstart,
+    double rmax,
+    double en[3],
+    double am[3],
+    double jcen[3],
+    int i0,
+    int nbod,
+    int nbig,
+    double *m,
+    double **x,
+    double **v,
+    double **s,
+    int *stat,
+    char **id,
+    int opt[8],
+    FILE *outfile,
+    char mem[NMESS],
+    char lmem[NMESS])
+{
+    int year, month;
+    double r2, rmax2, t1, e, l;
+    // char flost[38];
+    // char tstring[6];
+
+    if (i0 <= 0)
+    {
+        i0 = 2;
+    }
+    int ejflag = 0;
+    rmax2 = rmax * rmax;
+
+    // Calculate initial energy and angular momentum
+    l = mxx_en(jcen, nbod, nbig, m, x, v, s, &e);
+
+    // Flag each object which is ejected, and set its mass to zero
+    for(int j = i0; j < nbod; j++)
+    {
+        r2 = x[j][0] * x[j][0] + x[j][1] * x[j][1] + x[j][2] * x[j][2];
+        if (r2 > rmax2)
+        {
+            ejflag = 1;
+            stat[j] = -3;
+            m[j] = 0.0;
+            s[j][0] = 0.0;
+            s[j][1] = 0.0;
+            s[j][2] = 0.0;
+        }
+        // TODO: Write message to information file
+        // open (23,file=outfile,status='old',access='append',err=20)
+        if (opt[2] == 1)
+        {
+            t1 = mio_jd2y(time, year, month);
+            // flost = "(1x,a8,a,i10,1x,i2,1x,f8.5)";
+            // write (23,flost) id(j),mem(68)(1:lmem(68)),year,month,t1
+        } else {
+            if (opt[2] == 3)
+            {
+                t1 = (time - tstart) / 365.250;;
+                // tstring = mem[1];
+                // flost = "(1x,a8,a,f18.7,a)";
+            } else {
+                if (opt[2] == 0)
+                {
+                    t1 = time;
+                }
+                if (opt[2] == 2)
+                {
+                    t1 = time - tstart;
+                }
+                // tstring = mem[0];
+                // flost = '(1x,a8,a,f18.5,a)';
+            }
+            // write (23,flost) id(j),mem(68)(1:lmem(68)),t1,tstring;
+        }
+        // close(23);
+    }
+
+    // If ejections occurred, update ELOST and LLOST
+    if (ejflag)
+    {
+        am[1] = mxx_en(jcen, nbod, nbig, m, x, v, s, &en[1]);
+        en[2] = en[2] + (e - en[1]);
+        am[2] = am[2] + (l - am[1]);
+    }
+
+    return ejflag;
 }

@@ -21,7 +21,7 @@ endif
 #        Libraries            #
 ###############################
 
-CMERCURY_LIB_OBJS := orbel.o danby.o mxx.o
+CMERCURY_LIB_OBJS := orbel.o danby.o mxx.o mio.o
 CMERCURY_LIB := libcmercury.so
 
 ###############################

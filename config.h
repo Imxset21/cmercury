@@ -38,6 +38,31 @@
 #define DEGRAD 180.0 / PI
 #endif
 
+//! Maximum number of bodies
+#ifndef NMAX
+#define NMAX 2000
+#endif
+
+//! Maximum number of close-encounter minima monitored simultaneously
+#ifndef CMAX
+#define CMAX 50
+#endif
+
+//! Maximum number of messages in message.in
+#ifndef NMESS
+#define NMESS 200
+#endif
+
+//! An implausibly large number
+#ifndef HUGE_VAL
+#define HUGE_VAL 9.9e29
+#endif
+
+//! Maximum number of files that can be open at the same time
+#ifndef NFILES
+#define NFILES 50
+#endif
+
 //! Macro for DSIGN in FORTRAN77: If B >= 0 then the result is ABS(A), else it is -ABS(A). 
 #define DSIGN(A, B) B >= 0 ? fabs(A) : -fabs(A)
 

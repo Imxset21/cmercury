@@ -1,12 +1,15 @@
 /**
  * @file danby.h
  * @brief Solutions (partial or otherwise) for Danby-type drift equations
- * @date Time-stamp: <2016-03-01 16:22:24 pedro>
+ * @date Time-stamp: <2016-03-02 21:47:43 pedro>
  * @author Pedro Rittner, John E. Chambers, Gregory Tabak
  * @copyright LGPL v3
  */
 #ifndef DANBY_H
 #define DANBY_H
+
+#include "cmercury.h"
+#include "config.h"
 
 //! Convergence criteria for danby
 #ifndef DANBYAC
@@ -23,22 +26,6 @@
 #ifndef NLAG2
 #define NLAG2 400
 #endif
-
-//! Struct for a Jacobi coordinate
-struct jacobi_coord
-{
-    double x;
-    double y;
-    double z;
-};
-
-//! Struct for cvals from pp170
-struct cvals
-{
-    double c1;
-    double c2;
-    double c3;
-};
 
 /**
   * @brief Calculates the danby-type drift for one particle

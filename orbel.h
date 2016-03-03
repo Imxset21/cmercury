@@ -1,7 +1,7 @@
 /**
  * @file orbel.h
  * @brief Solutions (partial or otherwise) for Kepler's equations
- * @date Time-stamp: <2016-03-01 16:20:41 pedro>
+ * @date Time-stamp: <2016-03-02 21:47:48 pedro>
  * @author Pedro Rittner, John E. Chambers, Gregory Tabak
  * @copyright LGPL v3
  */
@@ -16,7 +16,7 @@
  * @returns anomaly as a real scalar
  * @date May 11, 1992
  * @author M. Duncan 
- * @see p. 70-72 of Fitzpatrick's book "Principles of Celestial Mechanics"
+ * From p. 70-72 of Fitzpatrick's book "Principles of Celestial Mechanics".
  *
  * For a parabola we can solve analytically.
  * Corrected for negative Q and use power series for small Q.

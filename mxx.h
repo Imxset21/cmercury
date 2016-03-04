@@ -53,8 +53,8 @@ extern int* mxx_sort(double *restrict arr, const size_t arr_size);
  * @author John E. Chambers, ErikSoft
  * @date 2 March 2001
  * @returns jac array
- * This assumes that *there are only 2 massive bodies (including the
- * central body) moving on circular orbits.
+ * This assumes that there are only 2 massive bodies (including the central
+ * body) moving on circular orbits.
  * N.B. All coordinates and velocities must be heliocentric!!
  */
 extern double* mxx_jac(
@@ -62,24 +62,24 @@ extern double* mxx_jac(
     const int nbod,
     const int nbig,
     double *m,
-    double **xh,
-    double **vh)
+    const double **restrict xh,
+    const double **restrict vh)
     __attribute__((nonnull(4, 5, 6)));
 
 /**
  * @author John E. Chambers
  * @brief Calculates the total energy and angular-momentum for a system
+ * @returns Total energy of the system
  * System has Masses M, coordinates X, velocities V and spin angular momenta S.
  * N.B. All coordinates and velocities must be with respect to the central body
- * @returns Total energy of the system
  */
 extern double mxx_en(
     double jcen[3],
     const int nbod,
     const int nbig,
     double *m,
-    double **xh,
-    double **vh,
+    const double **restrict xh,
+    const double **restrict vh,
     double **s,
     double *e)
     __attribute__((nonnull(4, 5, 6, 7, 8)));
@@ -130,8 +130,8 @@ extern int mxx_ejec(
     int nbod,
     int nbig,
     double *m,
-    double **x,
-    double **v,
+    const double **restrict x,
+    const double **restrict v,
     double **s,
     int *stat,
     char **id,

@@ -2,6 +2,9 @@
 
 #include "config.h"
 
+#include "mio.h"
+#include "mco.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -101,12 +104,25 @@ double* mxx_jac(
     const int nbod,
     const int nbig,
     double *m,
-    double **xh,
-    double **vh)
+    const double **restrict xh,
+    const double **restrict vh)
 {
-    int itmp[8] = {0}, iflag = 0;
+    int itmp[8] = {0};
     double x[NMAX][3];
     double v[NMAX][3];
+
+    // Make double** compatible alias of x and v for passing to other functions
+    double *x_ptr[3];
+    for (int i = 0; i < 3; i++)
+    {
+        x_ptr[i] = x[i];
+    }
+    double *v_ptr[3];
+    for (int i = 0; i < 3; i++)
+    {
+        v_ptr[i] = v[i];
+    }
+
     double temp = 0.0, dx = 0.0, dy = 0.0, dz = 0.0;
     double r = 0.0 , d = 0.0, a2 = 0.0, n = 0.0;
     double tmp2[NMAX][4];
@@ -119,7 +135,7 @@ double* mxx_jac(
     }
 
     // Convert to barycentric coordinates and velocities
-    iflag = mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, &itmp);
+    mco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
 
     dx = x[1][0] - x[0][0];
     dy = x[1][1] - x[0][1];
@@ -127,7 +143,7 @@ double* mxx_jac(
     a2 = dx * dx + dy * dy + dz * dz;
     n = sqrt((m[0] + m[1]) / (a2 * sqrt(a2)));
 
-    for(int j = nbig; j <= nbod; j++)
+    for (int j = nbig; j <= nbod; j++)
     {
         dx = x[j][0] - x[0][0];
         dy = x[j][1] - x[0][1];
@@ -148,16 +164,29 @@ double mxx_en(
     const int nbod,
     const int nbig,
     double *m,
-    double **xh,
-    double **vh,
+    const double **restrict xh,
+    const double **restrict vh,
     double **s,
     double *e)
 {
     int iflag = 0, itmp[8] = {0};
-    double x[NMAX][3], v[NMAX][3], l[3] = {0.0};
+    double l[3] = {0.0};
     double temp = 0.0, dx = 0.0, dy = 0.0, dz = 0.0, r2 = 0.0, ke = 0.0, pe = 0.0;
     double r_1 = 0.0, r_2 = 0.0, r_4 = 0.0, r_6 = 0.0, u2 = 0.0, u4 = 0.0, u6 = 0.0;
     double tmp2[NMAX][4];
+
+    double x[NMAX][3], v[NMAX][3];
+    // Make double** compatible alias of x and v for passing to other functions
+    double *x_ptr[3];
+    for (int i = 0; i < 3; i++)
+    {
+        x_ptr[i] = x[i];
+    }
+    double *v_ptr[3];
+    for (int i = 0; i < 3; i++)
+    {
+        v_ptr[i] = v[i];
+    }    
 
     // Local copy of e
     double _e = *e;
@@ -166,7 +195,7 @@ double mxx_en(
     pe = 0.0;
 
     // Convert to barycentric coordinates and velocities
-    iflag = mco_h2b(temp, jcen, nbod, nbig, temp, m, xh, vh, x, v, tmp2, &itmp);
+    mco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
 
     // Do the spin angular momenta first (probably the smallest terms)
     for (int j = 0; j < nbod; j++)
@@ -332,8 +361,8 @@ int mxx_ejec(
     int nbod,
     int nbig,
     double *m,
-    double **x,
-    double **v,
+    const double **restrict x,
+    const double **restrict v,
     double **s,
     int *stat,
     char **id,
@@ -342,8 +371,8 @@ int mxx_ejec(
     char mem[NMESS],
     char lmem[NMESS])
 {
-    int year, month;
-    double r2, rmax2, t1, e, l;
+    int year = 0, month = 0;
+    double r2 = 0.0, rmax2 = 0.0, t1 = 0.0, e = 0.0, l = 0.0;
     // char flost[38];
     // char tstring[6];
 
@@ -374,7 +403,7 @@ int mxx_ejec(
         // open (23,file=outfile,status='old',access='append',err=20)
         if (opt[2] == 1)
         {
-            t1 = mio_jd2y(time, year, month);
+            mio_jd2y(time, &year, &month, &t1);
             // flost = "(1x,a8,a,i10,1x,i2,1x,f8.5)";
             // write (23,flost) id(j),mem(68)(1:lmem(68)),year,month,t1
         } else {

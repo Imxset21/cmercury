@@ -12,16 +12,16 @@ CFLAGS := -std=c99 -Wall -Wextra -Wpedantic
 
 ifdef DEBUG
 CFLAGS += -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wshadow -Wuninitialized
-CFLAGS += -Og -g3 -DDEBUG
+CFLAGS += -Og -g3
 else
-CFLAGS += -march=x86-64 -O2 -DNDEBUG
+CFLAGS += -march=x86-64 -O2 -flto
 endif
 
 ###############################
 #        Libraries            #
 ###############################
 
-CMERCURY_LIB_OBJS := orbel.o danby.o mxx.o mio.o
+CMERCURY_LIB_OBJS := orbel.o danby.o mxx.o mio.o mco.o
 CMERCURY_LIB := libcmercury.so
 
 ###############################
@@ -35,7 +35,7 @@ CMERCURY_TEST_SRC := main.c
 #      Linker (LD) Flags      #
 ###############################
 
-LDFLAGS := -L. -lm
+LDFLAGS := -Wl,-rpath=`pwd`,--enable-new-dtags -L. -lm
 
 ###############################
 #       Definition Flags      #
@@ -52,7 +52,7 @@ endif
 #    Include Path & Flags     #
 ###############################
 
-INCLUDES := -I.
+INCLUDES ?= -I. -I/usr/include
 
 ###############################
 #        Make Targets         #

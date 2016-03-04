@@ -2,8 +2,12 @@
  * @file mio.h
  * @date Time-stamp: <2016-03-03 11:56:03 pedro>
  * @author Pedro Rittner, John E. Chambers, Gregory Tabak
- * @brief String formatting functions for cmercury
+ * @brief String formatting and I/O functions for cmercury
  */
+#ifndef MIO_H
+#define MIO_H
+
+#include "config.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -32,6 +36,15 @@ extern int** mio_spl(const size_t len, const char *str, int nsub)
  * cause problems when using some operating systems.
  */
 extern char* mio_re2c(const double x, const double xmin, const double xmax);
+
+/**
+ * @author John E. Chambers
+ * @brief Converts a double X into a 8-character ASCII string
+ * @returns Converted string as a char pointer
+ * 
+ * N.B. X must lie in the range -1.e112 < X < 1.e112
+ */
+extern char* mio_fl2c(const double x);
 
 /**
  * @author John E. Chambers
@@ -74,3 +87,111 @@ extern int mio_out(
     int algor,
     FILE *outfile)
     __attribute__((nonnull(7, 8, 9, 10, 11, 12, 13)));
+
+/**
+ * @author John E. Chambers
+ * @brief Writes a progress report to the log file
+ * Writes to stdout if you are running Mercury interactively
+ */
+extern int mio_log(
+    const double time,
+    const double tstart,
+    const double en[3],
+    const double am[3],
+    const int opt[8],
+    char **mem,
+    int lmem[NMESS])
+    __attribute__(());
+
+/**
+ * @author John E. Chambers
+ * @date 7 July 1999
+ * @brief Converts from Julian day number to Julian/Gregorian Calendar dates
+ *
+ * Assumes the dates are those used by the English calendar.
+ *
+ * Algorithm taken from `Practical Astronomy with your calculator' (1988)
+ * by Peter Duffett-Smith, 3rd edition, C.U.P.
+ *
+ * Algorithm for negative Julian day numbers (Julian calendar assumed) by
+ * J. E. Chambers.
+ *
+ * N.B. The output date is with respect to the Julian Calendar on or before
+ * ===  4th October 1582, and with respect to the Gregorian Calendar on or 
+ *      after 15th October 1582.
+ */
+extern void mio_jd2y(double jd0, int *year, int *month, double *day);
+
+
+/**
+ * @author John E. Chambers
+ * @brief Writes out an error message and terminates Mercury.
+ * @returns This function never returns
+ */
+extern void mio_err(
+    const int unit,
+    const char *s1,
+    const char *s2,
+    const char *s3,
+    const char *s4)
+    __attribute__((noreturn));
+
+/**
+ * @author John E. Chambers
+ * @brief Writes details of close encounter minima to an output file
+ * 
+ * It also decides how to continue the integration depending upon the
+ * close-encounter option chosen by the user. Close encounter details are stored
+ * until either 100 have been accumulated, or a data dump is done, at which
+ * point the stored encounter details are also output.
+ *
+ * For each encounter, the routine outputs the time and distance of closest
+ * approach, the identities of the objects involved, and the output
+ * variables of the objects at this time. The output variables are:
+ * expressed as
+ *  r = the radial distance
+ *  theta = polar angle
+ *  phi = azimuthal angle
+ *  fv = 1 / [1 + 2(ke/be)^2], where be and ke are the object's binding and
+ *                             kineti* energies. (Note that 0 < fv < 1).
+ *  vtheta = polar angle of velocity vector
+ *  vphi = azimuthal angle of the velocity vector
+ */
+extern int mio_ce(
+    double time,
+    double tstart,
+    double rcen,
+    double rmax,
+    int nbod,
+    int nbig,
+    double *m,
+    int *stat,
+    char **id,
+    int nclo,
+    int *iclo,
+    int *jclo,
+    int opt[8],
+    int stopflag,
+    double *tclo,
+    double *dclo,
+    double **ixvclo,
+    double **jxvclo,
+    char **mem,
+    int lmem[NMESS],
+    FILE* outfile,
+    int nstored,
+    int ceflush);
+
+/**
+ * @author John E. Chambers
+ * @brief Converts an ASCII string into a double X, where XMIN <= X < XMAX
+ * @date 1 July 1999
+ */
+extern double mio_c2re(
+    char *restrict c,
+    const double xmin,
+    const double xmax,
+    const size_t nchar)
+    __attribute__((nonnull(1)));
+
+#endif /* MIO_H */

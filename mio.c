@@ -4,10 +4,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+#include <tgmath.h>
 #include <string.h>
 
-int** mio_spl(
+int** cmio_spl(
     const size_t len,
     const char *str,
     int nsub)
@@ -78,7 +78,7 @@ ninety_nine:
     return delimit;
 }
 
-char* mio_re2c(const double x, const double xmin, const double xmax)
+char* cmio_re2c(const double x, const double xmin, const double xmax)
 {
     double z = 0.0;
 
@@ -112,7 +112,7 @@ char* mio_re2c(const double x, const double xmin, const double xmax)
     return mio_out;
 }
 
-int mio_out(
+int cmio_out(
     double time,
     double jcen[3],
     double rcen,
@@ -131,7 +131,7 @@ int mio_out(
     int algor,
     FILE *outfile)
 {
-    int k, len, nchar;
+    int len, nchar;
     double rhocgs, k_2, rfac, rcen_2, fr, fv, theta, phi, vtheta, vphi;
     char header[80];
     char c[NMAX][80];
@@ -238,7 +238,7 @@ int mio_out(
     return opflag;
 }
 
-int mio_log(
+int cmio_log(
     const double time,
     const double tstart,
     const double en[3],
@@ -268,13 +268,13 @@ int mio_log(
 
     double tmp0 = 0.0;
     double tmp1 = 0.0;
-    if (en[0]) { tmp0 = (en[1] + en[2] - en[0]) / abs(en[0]); }
-    if (am[0]) { tmp1 = (am[1] + am[2] - am[0]) / abs(am[0]); }
+    if (en[0]) { tmp0 = (en[1] + en[2] - en[0]) / fabs(en[0]); }
+    if (am[0]) { tmp1 = (am[1] + am[2] - am[0]) / fabs(am[0]); }
 
     double t1 = 0.0;
     if (opt[2] == 1)
     {
-        mio_jd2y(time, &year, &month, &t1);
+        cmio_jd2y(time, &year, &month, &t1);
         // write (*,flog) mem(64)(1:lmem(64)), year, month, t1,
         // mem(65)(1:lmem(65)), tmp0,mem(66)(1:lmem(66)), tmp1
     }
@@ -290,7 +290,7 @@ int mio_log(
     return 0;
 }
 
-void mio_jd2y(double jd0, int *year, int *month, double *day)
+void cmio_jd2y(double jd0, int *year, int *month, double *day)
 {
     int i, a, b, c, d, e, g;
     double jd, f, temp, x, y, z;
@@ -364,7 +364,7 @@ fifty:
     if (*month < 3) { year = year + 1; }
 }
 
-char* mio_fl2c(const double x)
+char* cmio_fl2c(const double x)
 {
     char *mio_out = calloc(8, sizeof(char));
     if (mio_out == NULL)
@@ -389,7 +389,7 @@ char* mio_fl2c(const double x)
     return mio_out;
 }
 
-void mio_err(
+void cmio_err(
     const int unit,
     const char *s1,
     const char *s2,
@@ -401,7 +401,7 @@ void mio_err(
     exit(EXIT_FAILURE);
 }
 
-int mio_ce(
+int cmio_ce(
     double time,
     double tstart,
     double rcen,
@@ -426,7 +426,7 @@ int mio_ce(
     int nstored,
     int ceflush)
 {
-    int k, year, month;
+    int year, month;
     double tmp0, t1, rfac, fr, fv, theta, phi, vtheta, vphi;
     static char c[200][80];
     char fstop[38];
@@ -490,7 +490,7 @@ int mio_ce(
         if (opt[2] == 1)
         {
             snprintf(fstop, sizeof(fstop), "(5a,/,9x,a,i10,1x,i2,1x,f4.1)");
-            mio_jd2y(tmp0, &year, &month, &t1);
+            cmio_jd2y(tmp0, &year, &month, &t1);
             // write (23,fstop) mem(121)(1:lmem(121)),mem(126)
             //      (1:lmem(126)),id(iclo(1)),',',id(jclo(1)),
             //      mem(71)(1:lmem(71)),year,month,t1
@@ -522,7 +522,7 @@ int mio_ce(
     return 0;
 }
 
-double mio_c2re(
+double cmio_c2re(
     char *restrict c,
     const double xmin,
     const double xmax,

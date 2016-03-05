@@ -1,6 +1,6 @@
 #include "mco.h"
 
-void mco_h2b(
+void cmco_h2b(
     const int nbod,
     const double *restrict m,
     const double **restrict xh,

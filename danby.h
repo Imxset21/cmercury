@@ -43,7 +43,7 @@
   * appropriate vbles and redoing a drift if the accuracy is too poor 
   * (as indicated by a non-zero return value).
   */
-extern int drift_one(
+extern int cdrift_one(
     struct jacobi_coord *initial_pos,
     struct jacobi_coord *vbles,
     const double mu,
@@ -58,7 +58,7 @@ extern int drift_one(
   * @author Hal Levison
   * @date 31/3/98
   */
-extern void drift_kepu_stumpff(double x,
+extern void cdrift_kepu_stumpff(double x,
                                double *c0,
                                struct cvals *cvals)
     __attribute__((nonnull(2, 3)));
@@ -75,7 +75,7 @@ extern void drift_kepu_stumpff(double x,
  * @author Martin Duncan  
  * @date March 12/93
  */
-extern int drift_kepu_p3solve(
+extern int cdrift_kepu_p3solve(
     const double dt,
     const double r0,
     const double mu,
@@ -98,7 +98,7 @@ extern int drift_kepu_p3solve(
  * @author Hal Levison  
  * @date 31/3/98
  */
-extern int drift_kepu_new(
+extern int cdrift_kepu_new(
     double *s,
     const double dt,
     const double r0,
@@ -123,7 +123,7 @@ extern int drift_kepu_new(
  * @author Hal Levison  
  * @date 4/21/93
  */
-extern int drift_kepu_lag(
+extern int cdrift_kepu_lag(
     double *s,
     const double dt,
     const double r0,
@@ -145,7 +145,7 @@ extern int drift_kepu_lag(
  * @author Hal Levison, Martin Duncan
  * @date 8/6/98
  */
-extern double drift_kepu_guess(
+extern double cdrift_kepu_guess(
     const double dt,
     const double r0,
     const double mu,
@@ -166,7 +166,7 @@ extern double drift_kepu_guess(
  * @author Martin Duncan  
  * @date 12/93
  */
-extern double drift_kepu_fchk(
+extern double cdrift_kepu_fchk(
     const double dt,
     const double r0,
     const double mu,
@@ -187,7 +187,7 @@ extern double drift_kepu_fchk(
  * @author Hal Levison
  * @date 2/3/93
  */
-extern int drift_kepu(
+extern int cdrift_kepu(
     const double dt,
     const double r0,
     const double mu,
@@ -200,7 +200,7 @@ extern int drift_kepu(
 /**
  * @brief  Subroutine for solving kepler's equation in difference form for an
  * ellipse, given SMALL dm and SMALL eccentricity.
- * @see drift_dan
+ * @see cdrift_dan
  * WARNING - BUILT FOR SPEED : DOES NOT CHECK HOW WELL THE ORIGINAL
  * EQUATION IS SOLVED! (CAN DO THAT IN THE CALLING ROUTINE BY
  * CHECKING HOW CLOSE (x - ec*s +es*(1.-c) - dm) IS TO ZERO.
@@ -211,7 +211,7 @@ extern int drift_kepu(
  * @param[in,out] sx sin of x (real*8 scalar)
  * @param[in,out] cx cos of x (real*8 scalar)
  */
-extern void drift_kepmd(
+extern void cdrift_kepmd(
     const double dm,
     const double es,
     const double ec,
@@ -228,7 +228,7 @@ extern void drift_kepmd(
  * @authors Hal Levison, Martin Duncan  
  * @date April 6/93 - MD adds dt and keeps dt0 unchanged
  */
-extern int drift_dan(
+extern int cdrift_dan(
     struct jacobi_coord *pos,
     struct jacobi_coord *vbles,
     const double mu,

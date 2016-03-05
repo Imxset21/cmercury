@@ -22,7 +22,7 @@
  * RA15 routine.
  * @author John E. Chambers 
  */
-extern void mxx_sync(
+extern void cmxx_sync(
     double time,
     double tstart,
     double h0,
@@ -46,7 +46,7 @@ extern void mxx_sync(
 /**
  * @brief Sorts an array in-place, returning an array of new indices of elements
  */
-extern int* mxx_sort(double *restrict arr, const size_t arr_size);
+extern int* cmxx_sort(double *restrict arr, const size_t arr_size);
 
 /**
  * @brief Calculates the Jacobi constant for massless particles
@@ -57,7 +57,7 @@ extern int* mxx_sort(double *restrict arr, const size_t arr_size);
  * body) moving on circular orbits.
  * N.B. All coordinates and velocities must be heliocentric!!
  */
-extern double* mxx_jac(
+extern double* cmxx_jac(
     double jcen[3],
     const int nbod,
     const int nbig,
@@ -73,7 +73,7 @@ extern double* mxx_jac(
  * System has Masses M, coordinates X, velocities V and spin angular momenta S.
  * N.B. All coordinates and velocities must be with respect to the central body
  */
-extern double mxx_en(
+extern double cmxx_en(
     double jcen[3],
     const int nbod,
     const int nbig,
@@ -90,7 +90,7 @@ extern double mxx_en(
  * Any objects with STAT < 0 are those that have been flagged for removal. It
  * reindexes all the appropriate arrays for the remaining objects.
  */
-extern void mxx_elim(
+extern void cmxx_elim(
     int *nbod,
     int *nbig,
     double *m,
@@ -119,7 +119,7 @@ extern void mxx_elim(
  * angular momentum due to collisions and ejections.
  * N.B. All coordinates must be with respect to the central body!!
  */
-extern int mxx_ejec(
+extern int cmxx_ejec(
     double time,
     double tstart,
     double rmax,

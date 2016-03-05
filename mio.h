@@ -20,7 +20,7 @@
  * returned in the array DELIMIT.
  * Substrings are those which are separated by spaces or the = symbol.
  */
-extern int** mio_spl(const size_t len, const char *str, int nsub)
+extern int** cmio_spl(const size_t len, const char *str, int nsub)
     __attribute__((nonnull(2)));
 
 /**
@@ -35,7 +35,7 @@ extern int** mio_spl(const size_t len, const char *str, int nsub)
  * ASCII characters 0 - 31 (CTRL characters) are not used, because they
  * cause problems when using some operating systems.
  */
-extern char* mio_re2c(const double x, const double xmin, const double xmax);
+extern char* cmio_re2c(const double x, const double xmin, const double xmax);
 
 /**
  * @author John E. Chambers
@@ -44,7 +44,7 @@ extern char* mio_re2c(const double x, const double xmin, const double xmax);
  * 
  * N.B. X must lie in the range -1.e112 < X < 1.e112
  */
-extern char* mio_fl2c(const double x);
+extern char* cmio_fl2c(const double x);
 
 /**
  * @author John E. Chambers
@@ -68,7 +68,7 @@ extern char* mio_fl2c(const double x);
  * @returns 0 if successful, -1 otherwise
  * N.B. Each object's distance must lie between RCEN < R < RMAX
  */
-extern int mio_out(
+extern int cmio_out(
     double time,
     double jcen[3],
     double rcen,
@@ -93,7 +93,7 @@ extern int mio_out(
  * @brief Writes a progress report to the log file
  * Writes to stdout if you are running Mercury interactively
  */
-extern int mio_log(
+extern int cmio_log(
     const double time,
     const double tstart,
     const double en[3],
@@ -120,7 +120,7 @@ extern int mio_log(
  * ===  4th October 1582, and with respect to the Gregorian Calendar on or 
  *      after 15th October 1582.
  */
-extern void mio_jd2y(double jd0, int *year, int *month, double *day);
+extern void cmio_jd2y(double jd0, int *year, int *month, double *day);
 
 
 /**
@@ -128,7 +128,7 @@ extern void mio_jd2y(double jd0, int *year, int *month, double *day);
  * @brief Writes out an error message and terminates Mercury.
  * @returns This function never returns
  */
-extern void mio_err(
+extern void cmio_err(
     const int unit,
     const char *s1,
     const char *s2,
@@ -157,7 +157,7 @@ extern void mio_err(
  *  vtheta = polar angle of velocity vector
  *  vphi = azimuthal angle of the velocity vector
  */
-extern int mio_ce(
+extern int cmio_ce(
     double time,
     double tstart,
     double rcen,
@@ -187,7 +187,7 @@ extern int mio_ce(
  * @brief Converts an ASCII string into a double X, where XMIN <= X < XMAX
  * @date 1 July 1999
  */
-extern double mio_c2re(
+extern double cmio_c2re(
     char *restrict c,
     const double xmin,
     const double xmax,

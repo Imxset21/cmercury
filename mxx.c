@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
-#include <math.h>
+#include <tgmath.h>
 
-void mxx_sync(
+void cmxx_sync(
     double time,
     double tstart,
     double h0,
@@ -32,7 +32,7 @@ void mxx_sync(
     int opt[8],
     int ngflag)
 {
-    fputs("mxx_sync not implemented\n", stderr);
+    fputs("cmxx_sync not implemented\n", stderr);
     return;
 }
 
@@ -46,11 +46,11 @@ static int compare_doubles(const void *restrict a, const void *restrict b)
     return 0;
 }
 
-int* mxx_sort(double *restrict arr, const size_t arr_size)
+int* cmxx_sort(double *restrict arr, const size_t arr_size)
 {
     if (arr == NULL)
     {
-        fputs("mxx_sort: invalid array size or invalid array\n", stderr);
+        fputs("cmxx_sort: invalid array size or invalid array\n", stderr);
         return NULL;
     }
 
@@ -59,7 +59,7 @@ int* mxx_sort(double *restrict arr, const size_t arr_size)
     if (index_arr == NULL)
     {
         fprintf(stderr,
-                "mxx_sort: unable to allocate index array of size %lu\n",
+                "cmxx_sort: unable to allocate index array of size %lu\n",
                 arr_size);
         return NULL;
     }
@@ -69,7 +69,7 @@ int* mxx_sort(double *restrict arr, const size_t arr_size)
     if (copy_of_arr == NULL)
     {
         fprintf(stderr,
-                "mxx_sort: unable to allocate copy array of size %lu\n",
+                "cmxx_sort: unable to allocate copy array of size %lu\n",
                 arr_size);
         free(index_arr);
         return NULL;
@@ -99,7 +99,7 @@ int* mxx_sort(double *restrict arr, const size_t arr_size)
     return index_arr;
 }
 
-double* mxx_jac(
+double* cmxx_jac(
     double jcen[3],
     const int nbod,
     const int nbig,
@@ -130,12 +130,12 @@ double* mxx_jac(
     double *jac = calloc(NMAX, sizeof(double));
     if (jac == NULL)
     {
-        fputs("mxx_jac: Unable to allocate jac array\n", stderr);
+        fputs("cmxx_jac: Unable to allocate jac array\n", stderr);
         return NULL;
     }
 
     // Convert to barycentric coordinates and velocities
-    mco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
+    cmco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
 
     dx = x[1][0] - x[0][0];
     dy = x[1][1] - x[0][1];
@@ -159,7 +159,7 @@ double* mxx_jac(
     return jac;
 }
 
-double mxx_en(
+double cmxx_en(
     double jcen[3],
     const int nbod,
     const int nbig,
@@ -195,7 +195,7 @@ double mxx_en(
     pe = 0.0;
 
     // Convert to barycentric coordinates and velocities
-    mco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
+    cmco_h2b(nbod, m, xh, vh, x_ptr, v_ptr);
 
     // Do the spin angular momenta first (probably the smallest terms)
     for (int j = 0; j < nbod; j++)
@@ -273,7 +273,7 @@ double mxx_en(
     return sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
 }
 
-void mxx_elim(
+void cmxx_elim(
     int *nbod,
     int *nbig,
     double *m,
@@ -350,7 +350,7 @@ void mxx_elim(
     }
 }
 
-int mxx_ejec(
+int cmxx_ejec(
     double time,
     double tstart,
     double rmax,
@@ -384,7 +384,7 @@ int mxx_ejec(
     rmax2 = rmax * rmax;
 
     // Calculate initial energy and angular momentum
-    l = mxx_en(jcen, nbod, nbig, m, x, v, s, &e);
+    l = cmxx_en(jcen, nbod, nbig, m, x, v, s, &e);
 
     // Flag each object which is ejected, and set its mass to zero
     for(int j = i0; j < nbod; j++)
@@ -403,7 +403,7 @@ int mxx_ejec(
         // open (23,file=outfile,status='old',access='append',err=20)
         if (opt[2] == 1)
         {
-            mio_jd2y(time, &year, &month, &t1);
+            cmio_jd2y(time, &year, &month, &t1);
             // flost = "(1x,a8,a,i10,1x,i2,1x,f8.5)";
             // write (23,flost) id(j),mem(68)(1:lmem(68)),year,month,t1
         } else {
@@ -432,7 +432,7 @@ int mxx_ejec(
     // If ejections occurred, update ELOST and LLOST
     if (ejflag)
     {
-        am[1] = mxx_en(jcen, nbod, nbig, m, x, v, s, &en[1]);
+        am[1] = cmxx_en(jcen, nbod, nbig, m, x, v, s, &en[1]);
         en[2] = en[2] + (e - en[1]);
         am[2] = am[2] + (l - am[1]);
     }

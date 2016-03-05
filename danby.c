@@ -2,20 +2,20 @@
 #include "config.h"
 #include <math.h>
 
-int drift_one(
+int cdrift_one(
     struct jacobi_coord *initial_pos,
     struct jacobi_coord *vbles,
     const double mu,
     const double dt)
 {
-    int iflg = drift_dan(initial_pos, vbles, mu, dt);
+    int iflg = cdrift_dan(initial_pos, vbles, mu, dt);
 
     if (iflg)
     {
         for (int i = 1; i <= 10; i++)
         {
             double dttmp = dt / 10.0;
-            iflg = drift_dan(initial_pos, vbles, mu, dttmp);
+            iflg = cdrift_dan(initial_pos, vbles, mu, dttmp);
 
             if (iflg)
             {
@@ -27,7 +27,7 @@ int drift_one(
     return 0;
 }
 
-void drift_kepu_stumpff(double x,
+void cdrift_kepu_stumpff(double x,
                         double *c0,
                         struct cvals *cvals)
 {
@@ -72,7 +72,7 @@ void drift_kepu_stumpff(double x,
     return;
 }
 
-int drift_kepu_p3solve(const double dt,
+int cdrift_kepu_p3solve(const double dt,
                        const double r0,
                        const double mu,
                        const double alpha,
@@ -115,7 +115,7 @@ int drift_kepu_p3solve(const double dt,
     return -1;
 }
 
-int drift_kepu_new(double *s,
+int cdrift_kepu_new(double *s,
                    const double dt,
                    const double r0,
                    const double mu,
@@ -132,7 +132,7 @@ int drift_kepu_new(double *s,
         const double s2 = _s * _s;
         const double x = s2 * alpha;
         double c0 = 0.0;
-        drift_kepu_stumpff(x, &c0, cvals);
+        cdrift_kepu_stumpff(x, &c0, cvals);
         cvals->c1 = cvals->c1 * _s;
         cvals->c2 = cvals->c2 * s2;
         cvals->c3 = cvals->c3 * _s * s2;
@@ -159,7 +159,7 @@ int drift_kepu_new(double *s,
     return -1;
 }
 
-int drift_kepu_lag(double *s,
+int cdrift_kepu_lag(double *s,
                    const double dt,
                    const double r0,
                    const double mu,
@@ -181,14 +181,14 @@ int drift_kepu_lag(double *s,
     {
         const double x = _s * _s * alpha;
         double c0 = 0.0;
-        drift_kepu_stumpff(x, &c0, cvals);
+        cdrift_kepu_stumpff(x, &c0, cvals);
         cvals->c1 = cvals->c1 * _s;
         cvals->c2 = cvals->c2 * _s * _s;
         cvals->c3 = cvals->c3 * _s * _s * _s;
         const double f = r0 * cvals->c1 + u * cvals->c2 + mu * cvals->c3 - dt;
         _fp = r0 * c0 + u * cvals->c1 + mu * cvals->c2;
         const double fpp = (-40.0 * alpha + mu) * cvals->c1 + u * c0;
-        const double ds = -ln * f / (_fp + DSIGN(1.0, _fp) * sqrt(fabs((ln - 1.0) *
+        const double ds = -ln * f / (_fp + SIGN(1.0, _fp) * sqrt(fabs((ln - 1.0) *
                                      (ln - 1.0) * _fp * _fp) - (ln - 1.0) * ln * f * fpp));
         _s = _s + ds;
 
@@ -207,14 +207,14 @@ int drift_kepu_lag(double *s,
     return 2;
 }
 
-static inline void mco_sine(double *x, double *sx, double *cx)
+static inline void cmco_sine(double *x, double *sx, double *cx)
 {
     *x = (*x > 0) ? remainder(*x, TWOPI) : remainder(*x, TWOPI) + TWOPI;
     *cx = cos(*x);
     *sx = (*x > PI) ? -sqrt(1.0 - (*cx **cx)) : sqrt(1.0 - (*cx **cx));
 }
 
-double drift_kepu_guess(
+double cdrift_kepu_guess(
     const double dt,
     const double r0,
     const double mu,
@@ -238,15 +238,15 @@ double drift_kepu_guess(
             double y = en * dt - es;
 
             double sy = 0.0, cy = 0.0;
-            mco_sine(&y, &sy, &cy);
+            cmco_sine(&y, &sy, &cy);
 
-            const double sigma = DSIGN(1.0, (es * cy + ec * sy));
+            const double sigma = SIGN(1.0, (es * cy + ec * sy));
             const double x = y + sigma * 0.85 * e;
             s = x / sqrt(alpha);
         }
     } else {
         // Find initial guess for hyperbolic motion.
-        const int iflg = drift_kepu_p3solve(dt, r0, mu, alpha, u, &s);
+        const int iflg = cdrift_kepu_p3solve(dt, r0, mu, alpha, u, &s);
 
         if (iflg)
         {
@@ -257,7 +257,7 @@ double drift_kepu_guess(
     return s;
 }
 
-double drift_kepu_fchk(
+double cdrift_kepu_fchk(
     const double dt,
     const double r0,
     const double mu,
@@ -268,7 +268,7 @@ double drift_kepu_fchk(
     double c0 = 0.0;
     struct cvals my_cvals = {.c1 = 0.0, .c2 = 0.0, .c3 = 0.0};
     const double x = s * s * alpha;
-    drift_kepu_stumpff(x, &c0, &my_cvals);
+    cdrift_kepu_stumpff(x, &c0, &my_cvals);
     my_cvals.c1 = my_cvals.c1 * s;
     my_cvals.c2 = my_cvals.c2 * s * s;
     my_cvals.c3 = my_cvals.c3 * s * s * s;
@@ -276,7 +276,7 @@ double drift_kepu_fchk(
     return f;
 }
 
-int drift_kepu(
+int cdrift_kepu(
     const double dt,
     const double r0,
     const double mu,
@@ -290,28 +290,28 @@ int drift_kepu(
 
     // Store initial guess for possible use later in
     // laguerre's method, in case newton's method fails.
-    s = drift_kepu_guess(dt, r0, mu, alpha, u, s);
+    s = cdrift_kepu_guess(dt, r0, mu, alpha, u, s);
     const double st = s;
 
-    iflg = drift_kepu_new(&s, dt, r0, mu, alpha, u, fp, cvals);
+    iflg = cdrift_kepu_new(&s, dt, r0, mu, alpha, u, fp, cvals);
 
     if (iflg)
     {
-        const double fo = drift_kepu_fchk(dt, r0, mu, alpha, u, st);
-        const double fn = drift_kepu_fchk(dt, r0, mu, alpha, u, s);
+        const double fo = cdrift_kepu_fchk(dt, r0, mu, alpha, u, st);
+        const double fn = cdrift_kepu_fchk(dt, r0, mu, alpha, u, s);
 
         if (fabs(fo) < fabs(fn))
         {
             s = st;
         }
 
-        iflg = drift_kepu_lag(&s, dt, r0, mu, alpha, u, fp, cvals);
+        iflg = cdrift_kepu_lag(&s, dt, r0, mu, alpha, u, fp, cvals);
     }
 
     return iflg;
 }
 
-void drift_kepmd(
+void cdrift_kepmd(
     const double dm,
     const double es,
     const double ec,
@@ -356,7 +356,7 @@ void drift_kepmd(
     return;
 }
 
-int drift_dan(
+int cdrift_dan(
     struct jacobi_coord *pos,
     struct jacobi_coord *vbles,
     const double mu,
@@ -393,12 +393,12 @@ int drift_dan(
         dt = dm/en;
         if ((dm*dm > 0.16) || (esq > 0.36))
         {
-            goto calc_drift_kepyu;
+            goto calc_cdrift_kepyu;
         }
 
         if (esq*dm*dm < 0.0016)
         {
-           drift_kepmd(dm, es, ec, &xkep, &s, &c);
+           cdrift_kepmd(dm, es, ec, &xkep, &s, &c);
 	       fchk = (xkep - ec*s +es*(1.-c) - dm);
 
 	       if(fchk*fchk > DANBYB)
@@ -433,8 +433,8 @@ int drift_dan(
         }
     }
              
-calc_drift_kepyu:
-    drift_kepu(dt,r0,mu,alpha,u, &fp, &my_cvals);
+calc_cdrift_kepyu:
+    cdrift_kepu(dt,r0,mu,alpha,u, &fp, &my_cvals);
 
     if (iflg == 0)
     {

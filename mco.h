@@ -13,7 +13,7 @@
  * @brief Converts coordinates with respect to the central body to barycentric
  * 
  */
-extern void mco_h2b(
+extern void cmco_h2b(
     const int nbod,
     const double *restrict m,
     const double **restrict xh,

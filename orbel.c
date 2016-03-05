@@ -4,10 +4,10 @@
 
 #include "orbel.h"
 
-double orbel_zget(double q)
+double corbel_zget(double q)
 {
     int iflag = 0;
-    double x, tmp, orbel_zget_out;
+    double x, tmp, corbel_zget_out;
 
     if (q < 0.0)
     {
@@ -18,26 +18,26 @@ double orbel_zget(double q)
     // If q is smaller than 0.001
     if (q < 1.0e-3)
     {
-        orbel_zget_out = q * (1.0 - (q * q / 3.0) * (1.0 - q * q));
+        corbel_zget_out = q * (1.0 - (q * q / 3.0) * (1.0 - q * q));
     } else {
         x = 0.50 * (3.0 * q + sqrt(9.0 * (pow(q, 2)) + 4.0));
         tmp = pow(x, (1.0 / 3.0));
-        orbel_zget_out = tmp - 1.0 / tmp;
+        corbel_zget_out = tmp - 1.0 / tmp;
     }
 
     if (iflag == 1)
     {
-        orbel_zget_out = -orbel_zget_out;
+        corbel_zget_out = -corbel_zget_out;
         q = -q;
     }
 
-    return orbel_zget_out;
+    return corbel_zget_out;
 }
 
-double orbel_flon(double e, double capn)
+double corbel_flon(double e, double capn)
 {
     int iflag = 0, IMAX = 10;
-    double orbel_flon_out;
+    double corbel_flon_out;
     double a, b, sq, biga, bigb;
     double x, x2;
     double f, fp, dx;
@@ -71,12 +71,12 @@ double orbel_flon(double e, double capn)
     biga = pow((-0.5 * b + sq), 0.3333333333333333);
     bigb = pow(-(0.5 * b + sq), 0.3333333333333333);
     x = biga + bigb;
-    orbel_flon_out = x;
+    corbel_flon_out = x;
 
     // If capn is tiny (or zero) no need to go further than cubic even for e =1
     if (capn < TINY)
     {
-        goto orbel_flon_normal_ret;
+        goto corbel_flon_normal_ret;
     }
 
     for (int i = 0; i < IMAX; i++)
@@ -87,48 +87,48 @@ double orbel_flon(double e, double capn)
         dx = -f / fp;
 
         // TODO: Convert 'format(1x, i3, 3(2x,1p1e22.15))' to something C-like
-        orbel_flon_out = x + dx;
+        corbel_flon_out = x + dx;
 
         // If we have converged here there's no point in going on
         if (fabs(dx) < TINY)
         {
-            goto orbel_flon_normal_ret;
+            goto corbel_flon_normal_ret;
         }
 
-        x = orbel_flon_out;
+        x = corbel_flon_out;
     }
 
     // Abnormal return here - we've gone thru the loop IMAX times without convergence
     if (iflag == 1)
     {
-        orbel_flon_out = -orbel_flon_out;
+        corbel_flon_out = -corbel_flon_out;
         capn = -capn;
     }
 
     // Print out diagnostic information regarding non-convergence state
     fputs("FLON : RETURNING WITHOUT COMPLETE CONVERGENCE\n", stderr);
-    diff = e * sinh(orbel_flon_out) - orbel_flon_out - capn;
+    diff = e * sinh(corbel_flon_out) - corbel_flon_out - capn;
     fprintf(stderr,
             "N: %f, F: %f, ecc * sinh(F) - F - N: %f\n",
-            capn, orbel_flon_out, diff);
-    return orbel_flon_out;
+            capn, corbel_flon_out, diff);
+    return corbel_flon_out;
 
     // Normal return here, but check if capn was originally negative
-orbel_flon_normal_ret:
+corbel_flon_normal_ret:
 
     if (iflag == 1)
     {
-        orbel_flon_out = -orbel_flon_out;
+        corbel_flon_out = -corbel_flon_out;
         capn = -capn;
     }
 
-    return orbel_flon_out;
+    return corbel_flon_out;
 }
 
-double orbel_fhybrid(double e, double n)
+double corbel_fhybrid(double e, double n)
 {
     double abn;
-    double orbel_fhybrid_out = 0.0;
+    double corbel_fhybrid_out = 0.0;
 
     abn = n;
 
@@ -139,20 +139,20 @@ double orbel_fhybrid(double e, double n)
 
     if (abn < 0.6360 * e - 0.60)
     {
-        orbel_fhybrid_out = orbel_flon(e, n);
+        corbel_fhybrid_out = corbel_flon(e, n);
     } else {
-        orbel_fhybrid_out = orbel_fget(e, n);
+        corbel_fhybrid_out = corbel_fget(e, n);
     }
 
-    return orbel_fhybrid_out;
+    return corbel_fhybrid_out;
 }
 
-double orbel_fget(double e, double capn)
+double corbel_fget(double e, double capn)
 {
     int IMAX = 10;
     double tmp, x, shx, chx;
     double esh, ech, f, fp, fpp, fppp, dx;
-    double orbel_fget_out = 0.0;
+    double corbel_fget_out = 0.0;
 
     // Function to solve "Kepler's eqn" for F (here called x) for given e and CAPN
 
@@ -166,7 +166,7 @@ double orbel_fget(double e, double capn)
         x = log(tmp);
     }
 
-    orbel_fget_out = x;
+    corbel_fget_out = x;
 
     for (int i = 0; i < IMAX; i++)
     {
@@ -183,17 +183,17 @@ double orbel_fget(double e, double capn)
         dx = -f / fp;
         dx = -f / (fp + dx * fpp / 2.0);
         dx = -f / (fp + dx * fpp / 2.0 + dx * dx * fppp / 6.0);
-        orbel_fget_out = x + dx;
+        corbel_fget_out = x + dx;
 
         // If we have converged here there's no point in going on
         if (fabs(dx) < TINY)
         {
-            return orbel_fget_out;
+            return corbel_fget_out;
         }
 
-        x = orbel_fget_out;
+        x = corbel_fget_out;
     }
 
     fputs("FGET : RETURNING WITHOUT COMPLETE CONVERGENCE", stderr);
-    return orbel_fget_out;
+    return corbel_fget_out;
 }

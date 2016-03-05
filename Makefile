@@ -1,26 +1,35 @@
 ###############################
 #      Compilers & Tools      #
 ###############################
-GCC := gcc
+GCC ?= gcc
+GFORTRAN ?= gfortran
 
 ###############################
-#       COMPILER FLAGS        #
+#   OS & Architecture Flags   #
+###############################
+
+OS_ARCH ?= x86-64
+STDC ?= c99
+
+###############################
+#       Compiler Flags        #
 ###############################
 
 # C & related flags, with debug switch
-CFLAGS := -std=c99 -Wall -Wextra -Wpedantic
+CFLAGS := -march=$(OS_ARCH) -std=$(STDC) -Wall -Wextra -Wpedantic
 
 ifdef DEBUG
 CFLAGS += -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wshadow -Wuninitialized
 CFLAGS += -Og -g3
 else
-CFLAGS += -march=x86-64 -O2 -flto
+CFLAGS += -O2 -flto -fstack-protector -Wno-unused
 endif
 
 ###############################
 #        Libraries            #
 ###############################
 
+MERCURY_OBJS := forbel.o
 CMERCURY_LIB_OBJS := orbel.o danby.o mxx.o mio.o mco.o
 CMERCURY_LIB := libcmercury.so
 
@@ -29,7 +38,7 @@ CMERCURY_LIB := libcmercury.so
 ###############################
 
 CMERCURY_TEST_BIN := main.bin
-CMERCURY_TEST_SRC := main.c
+CMERCURY_TEST_OBJ := main.o
 
 ###############################
 #      Linker (LD) Flags      #
@@ -78,7 +87,16 @@ test: $(CMERCURY_TEST_BIN)
 clean:
 	@rm -f $(OBJECTS) $(LIBRARIES) $(BINARIES) *.s *.i *.ii
 
-# ------- CMercury Library -------
+###############################
+# Mercury Regression Testing  #
+###############################
+
+$(MERCURY_OBJS): %.o : %.for
+	$(GFORTRAN) -o $@ -c $<
+
+#####################
+#  CMercury Library #
+#####################
 
 $(CMERCURY_LIB_OBJS): %.o : %.c
 	$(GCC) -fPIC $(CFLAGS) $(INCLUDES) $(DEFINES) -o $@ -c $<
@@ -86,7 +104,12 @@ $(CMERCURY_LIB_OBJS): %.o : %.c
 $(CMERCURY_LIB): $(CMERCURY_LIB_OBJS)
 	$(GCC) -shared -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 
-# ------- CMercury Test Binary -------
+########################
+# CMercury Test Binary #
+########################
 
-$(CMERCURY_TEST_BIN): $(CMERCURY_LIB)
-	$(GCC) $(CFLAGS) $(INCLUDES) $(CMERCURY_TEST_SRC) -o $@ $(LDFLAGS) -lcmercury
+$(CMERCURY_TEST_OBJ): %.o : %.c
+	$(GCC) $(CFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(CMERCURY_TEST_BIN): $(CMERCURY_LIB) $(MERCURY_OBJS) $(CMERCURY_TEST_OBJ)
+	$(GCC) $(MERCURY_OBJS) $(CMERCURY_TEST_OBJ) -o $@ $(LDFLAGS) -lcmercury -lgfortran

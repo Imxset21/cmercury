@@ -21,7 +21,7 @@
  * For a parabola we can solve analytically.
  * Corrected for negative Q and use power series for small Q.
  */
-extern double orbel_zget(double q);
+extern double corbel_zget(double q);
 
 /**
  * @brief Solves Kepler's eqn. for hyperbola using hybrid approach.  
@@ -34,7 +34,7 @@ extern double orbel_zget(double q);
  * Uses power series for N in terms of F and Newton's method.
  * ONLY GOOD FOR LOW VALUES OF N (N < 0.636*e -0.6)
  */
-extern double orbel_flon(double e, double capn);
+extern double corbel_flon(double e, double capn);
 
 
 /**
@@ -47,7 +47,7 @@ extern double orbel_flon(double e, double capn);
  * For abs(N) < 0.636*ecc -0.6 , use FLON.
  * For larger N, uses FGET.
  */
-extern double orbel_fhybrid(double e, double n);
+extern double corbel_fhybrid(double e, double n);
 
 /**
  * @brief  Solves Kepler's eqn. for hyperbola using hybrid approach.  
@@ -59,6 +59,6 @@ extern double orbel_fhybrid(double e, double n);
  * @see pp. 70-72 of Fitzpatrick's book "Principles of Cel. Mech. ".
  * @see Quartic convergence from Danby's book.
  */
-extern double orbel_fget(double e, double capn);
+extern double corbel_fget(double e, double capn);
 
 #endif /* UTILS_H */

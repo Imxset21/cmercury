@@ -194,4 +194,43 @@ extern double cmio_c2re(
     const size_t nchar)
     __attribute__((nonnull(1)));
 
+
+typedef struct cmercury_simul_data
+{
+    double time;
+    double tstart;
+    double tstop;
+    double dtout;
+    int algor;
+    double h0;
+    double tol;
+    double rmax;
+    double rcen;
+    double jcen[3];
+    double en[3];
+    double am[3];
+    double cefac;
+    int ndump;
+    int nfun;
+    int nbod;
+    int nbig;
+    double m[NMAX];
+    double x[NMAX][3];
+    double v[NMAX][3];
+    double s[NMAX][3];
+    double rho[NMAX];
+    double rceh[NMAX];
+    int stat[NMAX];
+    char id[NMAX][8];
+    double epoch[NMAX];
+    double ngf[NMAX][4];
+    int opt[8];
+    int opflag;
+    int ngflag;
+    FILE* outfile;
+    FILE* dumpfile;
+} *cmercury_simul_data_t;
+
+extern int cmio_in(cmercury_simul_data_t simul_data);
+
 #endif /* MIO_H */

@@ -4,8 +4,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <tgmath.h>
 #include <string.h>
+#include <errno.h>
 
 int** cmio_spl(
     const size_t len,
@@ -542,4 +544,58 @@ double cmio_c2re(
         return 0xDEADBEEF;
     }
     return xmin + y * (xmax - xmin);
+}
+
+int cmio_in(cmercury_simul_data_t simul_data)
+{
+    if (simul_data == NULL)
+    {
+        fputs("cmio_in: unable to read simulation data object\n", stderr);
+        return -1;
+    }
+
+    int itmp,jtmp,informat,lim[10][2],nsub,year,month,lineno;
+    double q,a,e,i,p,n,l,temp,tmp2,tmp3,rhocgs,t1,tmp4,tmp5,tmp6;
+
+    bool test,oldflag,flag1,flag2;
+    char c1;
+    char c3[3] = {0}, alg[60][3];
+    char outfile[3][80], infile[3][80], dumpfile[4][80];
+    char filename[80] = {0}, c80[80] = {0};
+    char string[150] = {0};
+    
+    char mem[80];
+
+    // FIXME: I have no clue with this is decided at runtime and not as a macro
+    rhocgs = AU * AU * AU * K2 / MSUN;
+
+    // Read in output messages
+    FILE* message_in = fopen("message.in", "r");
+    if (message_in == NULL)
+    {
+        fprintf(stderr,
+                "cmio_in: unable to open message.in: %s\n", (errno == ENOENT) ?
+                "message.in file doesn't exist." :
+                "an error occurred while reading message.in.");
+        return -1;
+    }
+
+    // TODO: Store the messages into a buffer for re-use (?)
+    int linum = 0;
+    while (fgets(mem, sizeof(char) * 80, message_in) != NULL)
+    {
+#ifdef DEBUG
+        fprintf(stdout, "message.in:%d: %s", linum, mem);
+#endif
+        linum++;
+    }
+    if (!feof(message_in) && (ferror(message_in)))
+    {
+        perror("fgets()");
+        fprintf(stderr,"fgets() failed in at line # %d\n", linum);
+        return -1;
+    }
+    fclose(message_in);
+
+    return 0;
 }

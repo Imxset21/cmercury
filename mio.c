@@ -546,6 +546,178 @@ double cmio_c2re(
     return xmin + y * (xmax - xmin);
 }
 
+/**
+ * @brief Reads the messages.in file and writes its contents to the given vars
+ * @param[out] lines NMESS-sized array of 80-character arrays for file lines
+ * @returns Number of lines read, or -1 if reading the file failed
+ */
+static int cmio_in_read_messages_in(char (*lines)[NMESS][80])
+{
+    if (lines == NULL)
+    {
+        fputs("cmio_read_messages_in: lines array is NULL\n", stderr);
+        return -1;
+    }
+    
+    // Open file for reading
+    const char *min_fname = "message.in";
+    FILE* message_in = fopen(min_fname, "r");
+    if (message_in == NULL)
+    {
+        fprintf(stderr,
+                "cmio_read_messages_in: unable to open %s: %s\n", min_fname,
+                (errno == ENOENT) ?
+                "file doesn't exist." :
+                "an error occurred while reading the file.");
+        return -1;
+    }
+
+    // Read lines one by one into the provided buffers
+    int linum = 0;
+    while (fgets(lines[0][linum], sizeof(lines[0][linum]), message_in) != NULL)
+    {
+        linum++;
+    }
+
+    // Check if we reached the end of the file or some other error occurred
+    if (!feof(message_in) && (ferror(message_in)))
+    {
+        perror("fgets()");
+        fprintf(stderr,"fgets() failed in at line #%d\n", linum);
+        linum = -1;
+    }
+    fclose(message_in);
+
+    return linum;
+}
+
+/**
+ * @brief Reads files.in file and places result in input params
+ * @param[out] 
+ * @returns 0 if successful, or -1 if reading the file failed
+ */
+static int cmio_in_read_files_in(
+    char (*infiles)[3][80],
+    char (*outfiles)[3][80],
+    char (*dumpfiles)[4][80])
+{
+    if (infiles == NULL || outfiles == NULL || dumpfiles == NULL)
+    {
+        fputs("cmio_read_messages_in: one of the arrays is NULL\n", stderr);
+        return -1;
+    }
+
+    // Open the file
+    const char *fin_fname = "files.in";
+    FILE* files_in = fopen(fin_fname, "r");
+    if (files_in == NULL)
+    {
+        fprintf(stderr,
+                "cmio_read_files_in: unable to open %s: %s\n", fin_fname,
+                (errno == ENOENT) ?
+                "file doesn't exist." :
+                "an error occurred while reading the file.");
+        return -1;
+    }
+
+    // Read the following filenames:
+    // *3* input files (*.in)
+    // *3* output files (*.out)
+    // *4* dump files (*.dmp)
+    int success = 0;
+    for (size_t i = 0; i < 3 + 3 + 4; i++)
+    {
+        // Note: have to do (i % j) because of each array's indexing
+        void* r = NULL;
+        if (i < 3)
+        {
+            r = fgets(infiles[0][i], sizeof(infiles[0][i]), files_in);
+        } else if (i < 6) {
+            r = fgets(outfiles[0][i % 3], sizeof(outfiles[0][i % 3]), files_in);
+        } else {
+            r = fgets(dumpfiles[0][i % 4], sizeof(dumpfiles[0][i % 4]), files_in);
+        }
+
+        // If reading the file failed for any reason
+        if (r == NULL)
+        {
+            perror("cmio_read_files_in: fgets()");
+            fprintf(stderr, "cmio_read_files_in: fgets() failed at line #%lu\n", i);
+            success = -1;
+            break;
+        } else {
+            // Hackery to 'remove' leading whitespace and trailing newline
+            int result = 0;
+            if (i < 3)
+            {
+                result = sscanf(infiles[0][i], " %s\n", infiles[0][i]);
+            } else if (i < 6) {
+                result = sscanf(outfiles[0][i % 3], " %s\n", outfiles[0][i % 3]);
+            } else {
+                result = sscanf(dumpfiles[0][i % 4], " %s\n", dumpfiles[0][i % 4]);
+            }
+            // Check if our sscanf trick didn't work... oops
+            if (result != 1)
+            {
+                fprintf(stderr,
+                        "cmio_read_files_in: sscanf failed for line #%lu\n",
+                        i);
+                success = -1;
+                break;
+            }
+        }
+    }
+    fclose(files_in);
+
+    return success;
+}
+
+/**
+ * @brief Attempts to opens the info file, given status of restart file
+ * @param[in] info_filename Filename of the information file
+ * @param[in] restart_filename Filename of the restart file
+ * @returns FILE pointer to info file, NULL if an error occurred
+ */
+static FILE* cmio_in_open_info(const char (*info_filename)[80],
+                               const char (*restart_filename)[80])
+{
+    // Try to open both the restart file or the info file
+    FILE *restart_fp = fopen(restart_filename[0], "r");
+    FILE *info_fp = fopen(info_filename[0], "r");
+
+    // If BOTH files exist OR if NEITHER file exists, proceed normally
+    // If one file exists but the other doesn't, then we're in trouble
+    if ((restart_fp == NULL && info_fp) || (restart_fp && info_fp == NULL))
+    {
+        if (restart_fp)
+        {
+            fputs("cio_min: Restart file exists, but info doesn't!\n", stderr);
+            fclose(restart_fp);
+        }
+        if (info_fp)
+        {
+            fputs("cio_min: Info file exists, but restart doesn't!\n", stderr);
+            fclose(info_fp);
+        }
+        return NULL;
+    }
+
+    // Make sure restart file is closed if it exists
+    if (restart_fp)
+    {
+        fclose(restart_fp);
+        restart_fp = NULL;
+    }
+    // Re-open info file in append mode after closing its read-mode cousin
+    if (info_fp)
+    {
+        fclose(info_fp);
+    }
+    info_fp = fopen(info_filename[0], "a");
+
+    return info_fp;
+}
+
 int cmio_in(cmercury_simul_data_t simul_data)
 {
     if (simul_data == NULL)
@@ -560,42 +732,39 @@ int cmio_in(cmercury_simul_data_t simul_data)
     bool test,oldflag,flag1,flag2;
     char c1;
     char c3[3] = {0}, alg[60][3];
-    char outfile[3][80], infile[3][80], dumpfile[4][80];
+
     char filename[80] = {0}, c80[80] = {0};
     char string[150] = {0};
     
-    char mem[80];
-
     // FIXME: I have no clue with this is decided at runtime and not as a macro
     rhocgs = AU * AU * AU * K2 / MSUN;
 
-    // Read in output messages
-    FILE* message_in = fopen("message.in", "r");
-    if (message_in == NULL)
+    // Read messages in
+    char mem[NMESS][80];
+    if (cmio_in_read_messages_in(&mem) < 0)
     {
-        fprintf(stderr,
-                "cmio_in: unable to open message.in: %s\n", (errno == ENOENT) ?
-                "message.in file doesn't exist." :
-                "an error occurred while reading message.in.");
+        fputs("cmio_in: unable to read messages file.\n", stderr);
         return -1;
     }
 
-    // TODO: Store the messages into a buffer for re-use (?)
-    int linum = 0;
-    while (fgets(mem, sizeof(char) * 80, message_in) != NULL)
+    // Read filenames in
+    char outfiles[3][80], infiles[3][80], dumpfiles[4][80];
+    if (cmio_in_read_files_in(&infiles, &outfiles, &dumpfiles))
     {
-#ifdef DEBUG
-        fprintf(stdout, "message.in:%d: %s", linum, mem);
-#endif
-        linum++;
-    }
-    if (!feof(message_in) && (ferror(message_in)))
-    {
-        perror("fgets()");
-        fprintf(stderr,"fgets() failed in at line # %d\n", linum);
+        fputs("cmio_in: unable to read files file.\n", stderr);
         return -1;
     }
-    fclose(message_in);
 
+    // Try to open both the restart file or the info file
+    FILE *info_fp = cmio_in_open_info((const char (*)[80]) &outfiles[2],
+                                      (const char (*)[80]) &dumpfiles[3]);
+    if (info_fp == NULL)
+    {
+        fprintf(stderr, "cmio_in: failed to open info file %s\n", outfiles[2]);
+        return -1;
+    }
+
+    fclose(info_fp);
+    
     return 0;
 }

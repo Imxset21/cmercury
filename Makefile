@@ -3,6 +3,7 @@
 ###############################
 GCC ?= gcc
 GFORTRAN ?= gfortran
+DOXYGEN ?= doxygen
 
 ###############################
 #   OS & Architecture Flags   #
@@ -76,7 +77,7 @@ TEMPFILES   := $(wildcard *.out)
 #         Make Rules          #
 ###############################
 
-.PHONY: clean all build
+.PHONY: clean all build doc
 
 build: all
 
@@ -114,3 +115,10 @@ $(CMERCURY_TEST_OBJ): %.o : %.c
 
 $(CMERCURY_TEST_BIN): $(CMERCURY_LIB) $(MERCURY_OBJS) $(CMERCURY_TEST_OBJ)
 	$(GCC) $(MERCURY_OBJS) $(CMERCURY_TEST_OBJ) -o $@ $(LDFLAGS) -lcmercury -lgfortran
+
+#######################
+# Documentation Build #
+#######################
+
+doc: 
+	$(DOXYGEN) Doxygen.conf

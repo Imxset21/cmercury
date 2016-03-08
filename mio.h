@@ -11,17 +11,43 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
 
-/**
- * @author John E. Chambers
- * Given a character string STRING, of length LEN bytes, the routine finds 
- * the beginnings and ends of NSUB substrings present in the original, and 
- * delimited by spaces. The positions of the extremes of each substring are 
- * returned in the array DELIMIT.
- * Substrings are those which are separated by spaces or the = symbol.
- */
-extern int** cmio_spl(const size_t len, const char *str, int nsub)
-    __attribute__((nonnull(2)));
+typedef struct cmercury_simul_data
+{
+    double time;
+    double tstart;
+    double tstop;
+    double dtout;
+    int algor;
+    double h0;
+    double tol;
+    double rmax;
+    double rcen;
+    double jcen[3];
+    double en[3];
+    double am[3];
+    double cefac;
+    int ndump;
+    int nfun;
+    int nbod;
+    int nbig;
+    double m[NMAX];
+    double x[NMAX][3];
+    double v[NMAX][3];
+    double s[NMAX][3];
+    double rho[NMAX];
+    double rceh[NMAX];
+    int stat[NMAX];
+    char id[NMAX][8];
+    double epoch[NMAX];
+    double ngf[NMAX][4];
+    int opt[8];
+    int opflag;
+    int ngflag;
+    FILE* outfile;
+    FILE* dumpfile;
+} *cmercury_simul_data_t;
 
 /**
  * @author John E. Chambers
@@ -128,13 +154,7 @@ extern void cmio_jd2y(double jd0, int *year, int *month, double *day);
  * @brief Writes out an error message and terminates Mercury.
  * @returns This function never returns
  */
-extern void cmio_err(
-    const int unit,
-    const char *s1,
-    const char *s2,
-    const char *s3,
-    const char *s4)
-    __attribute__((noreturn));
+extern void cmio_err(void) __attribute__((noreturn));
 
 /**
  * @author John E. Chambers
@@ -193,43 +213,6 @@ extern double cmio_c2re(
     const double xmax,
     const size_t nchar)
     __attribute__((nonnull(1)));
-
-
-typedef struct cmercury_simul_data
-{
-    double time;
-    double tstart;
-    double tstop;
-    double dtout;
-    int algor;
-    double h0;
-    double tol;
-    double rmax;
-    double rcen;
-    double jcen[3];
-    double en[3];
-    double am[3];
-    double cefac;
-    int ndump;
-    int nfun;
-    int nbod;
-    int nbig;
-    double m[NMAX];
-    double x[NMAX][3];
-    double v[NMAX][3];
-    double s[NMAX][3];
-    double rho[NMAX];
-    double rceh[NMAX];
-    int stat[NMAX];
-    char id[NMAX][8];
-    double epoch[NMAX];
-    double ngf[NMAX][4];
-    int opt[8];
-    int opflag;
-    int ngflag;
-    FILE* outfile;
-    FILE* dumpfile;
-} *cmercury_simul_data_t;
 
 extern int cmio_in(cmercury_simul_data_t simul_data);
 

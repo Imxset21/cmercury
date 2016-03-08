@@ -70,6 +70,7 @@ INCLUDES ?= -I. -I/usr/include
 OBJECTS		:= $(wildcard *.o)
 LIBRARIES	:= $(wildcard *.so)
 BINARIES	:= $(wildcard *.bin)
+TEMPFILES   := $(wildcard *.out)
 
 ###############################
 #         Make Rules          #
@@ -85,7 +86,7 @@ test: $(CMERCURY_TEST_BIN)
 	./$<
 
 clean:
-	@rm -f $(OBJECTS) $(LIBRARIES) $(BINARIES) *.s *.i *.ii
+	@rm -f $(OBJECTS) $(LIBRARIES) $(BINARIES) $(TEMPFILES)
 
 ###############################
 # Mercury Regression Testing  #

@@ -1,84 +1,79 @@
-#include "mio.h"
-
 #include "config.h"
+
+#include "mio.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <tgmath.h>
+#include <ctype.h>
 #include <string.h>
 #include <errno.h>
 
-int** cmio_spl(
-    const size_t len,
-    const char *str,
-    int nsub)
+//! Simulation algorithm choice
+enum SIMUL_ALGO
 {
-    char c = ' ';
-    nsub = 0;
-    size_t j = 0;
+    BS_ALGO = 0,
+    MVS_ALGO,
+    BS2_ALGO,
+    HYBRID_ALGO,
+    RADAU_ALGO
+};
 
-    // Allocate master array
-    int **delimit = calloc(100, sizeof(int*));
-    if (delimit == NULL)
-    {
-        fputs("mio_spl: Could not allocate delimiter array.\n", stderr);
-        return NULL;
-    }
+//! Simulation precision (not to be confused with floating/double precision!)
+enum SIMUL_PRECISION
+{
+    LOW_PRECISION = 0,
+    MEDIUM_PRECISION,
+    HIGH_PRECISION,
+};
 
-    // Allocate sub-arrays
-    for (size_t i = 0; i < 100; i++)
-    {
-        delimit[i] = calloc(2, sizeof(int));
-        if (delimit[i] == NULL)
-        {
-            fprintf(stderr,
-                    "mio_spl: Could not allocate delimiter sub-array[%lu].\n",
-                    i);
-            return NULL;
-        }
-    }
+//! Convenience object for passing simulation parameters
+typedef struct simul_params
+{
+    //! Simulation algorithm
+    enum SIMUL_ALGO algo;
+    //! Start time (days)
+    double simul_start;
+    //! Stop time (days)
+    double stop_time;
+    //! Output interval (days)
+    double output_interval;
+    //! Timestep (days)
+    unsigned int timestep;
+    //! Accuracy parameter 
+    double accuracy_param;
+    //! Stop integration after a close encounter
+    bool encounter_stop;
+    //! Allow collisions to occur
+    bool allow_collisions;
+    //! Include collisional fragmentation
+    bool collisional_fragmentation;
+    //! Express time in days or years
+    bool time_in_years;
+    //! Express time relative to integration start time
+    bool time_relative_to_start;
+    //! Output precision
+    enum SIMUL_PRECISION precision;
+    //! Include user-defined force
+    bool use_user_force;
+    //! Ejection distance (AU)
+    double ejection_distance_AU;
+    //! Radius of central body (AU)
+    double central_body_radius_AU;
+    //! Central mass (solar)
+    double central_mass_solar;
+    double central_j2;
+    double central_j4;
+    double central_j6;
+} *simul_params_t;
 
-ten:
-    j++;
-    if (j > len)
-    {
-        goto ninety_nine;
-    }
-    c = str[j];
-    if (c == ' ' || c == '=')
-    {
-        goto ten;
-    }
-
-    // Find the end of string
-    size_t k = j;
-twenty:
-    k++;
-    if (k > len)
-    {
-        goto thirty;
-    }
-    c = str[k];
-    if (c != ' ' && c != '=')
-    {
-        goto twenty;
-    }
-
-    // Store details for this string
-thirty:
-    nsub = nsub + 1;
-    delimit[nsub][0] = j;
-    delimit[nsub][1] = k - 1;
-
-    if (k < len)
-    {
-        j = k;
-        goto ten;
-    }
-ninety_nine:
-    return delimit;
-}
+/**
+ * @brief Function pointer to filtering function for parameter acceptance
+ * @param[in] val_ptr Pointer to value to test
+ * @returns true if the value is accepted, false otherwise
+ */
+typedef bool (*accept_val_t)(void* val_ptr);
 
 char* cmio_re2c(const double x, const double xmin, const double xmax)
 {
@@ -112,6 +107,12 @@ char* cmio_re2c(const double x, const double xmin, const double xmax)
     }
 
     return mio_out;
+}
+
+char* cmio_fl2c(const double x __attribute__((unused)))
+{
+    fputs("cmio_fl2c not implemented.\n", stderr);
+    return NULL;
 }
 
 int cmio_out(
@@ -366,40 +367,9 @@ fifty:
     if (*month < 3) { year = year + 1; }
 }
 
-char* cmio_fl2c(const double x)
-{
-    char *mio_out = calloc(8, sizeof(char));
-    if (mio_out == NULL)
-    {
-        fputs("mio_fl2c: unable to allocate memory for float conversion.\n", stderr);
-        return NULL;
-    }
-    // Write double to string
-    int result = 0;
-#ifdef __STDC_LIB_EXT1__
-    result = snprintf_s(mio_out, sizeof(char) * 8, "%lf", x);
-#else
-    result = snprintf(mio_out, sizeof(char) * 8, "%lf", x);
-#endif
-
-    if (result < 0)
-    {
-        fprintf(stderr, "mio_fl2c: error while writing %lf to buffer.\n", x);
-        return NULL;
-    }
-
-    return mio_out;
-}
-
-void cmio_err(
-    const int unit,
-    const char *s1,
-    const char *s2,
-    const char *s3,
-    const char *s4)
+void cmio_err(void)
 {
     fputs("ERROR: Program terminated. See information file for details.\n", stderr);
-    fprintf(stderr, "%d: %s\n%s\n%s\n%s", unit, s1, s2, s3, s4);
     exit(EXIT_FAILURE);
 }
 
@@ -592,8 +562,272 @@ static int cmio_in_read_messages_in(char (*lines)[NMESS][80])
 }
 
 /**
+ * @brief Gets the address of the '=' delimited substring in a string
+ * @param[in] str String to search for substring in
+ * @param[out] sub_str_len Length of substring
+ * @returns Pointer to start of the substring, or NULL if an error occurred
+ */
+static char* get_postfix_substring(const char* str, size_t *sub_str_len)
+{
+    if (str == NULL)
+    {
+        fputs("get_postfix_substring: string is null\n", stderr);
+        return NULL;
+    } else if (sub_str_len == NULL) {
+        fputs("get_postfix_substring: sub_str_len is null\n", stderr);
+        return NULL;
+    }
+    
+    const size_t str_len = strlen(str);
+    size_t seen_equals_index = 0;
+    bool seen_equals = false;
+    // Scan the string
+    for (size_t i = 0; i < str_len; i++)
+    {
+        if (str[i] == '=')
+        {
+            seen_equals_index = i;
+            seen_equals = true;
+            continue;
+        }
+
+        if (seen_equals)
+        {
+            *sub_str_len += 1;
+        }
+    }
+
+    if (!seen_equals)
+    {
+        fputs("get_postfix_substring: couldn't locate substring start\n", stderr);
+        return NULL;
+    }
+
+    char *substring = calloc(*sub_str_len, sizeof(char));
+    if (substring == NULL)
+    {
+        fputs("get_postfix_substring: couldn't allocate substring\n", stderr);
+        return NULL;
+    }
+
+    // Copy substring, ignoring non-alphanumeric characters (but including .)
+    size_t i = 0;
+    for (size_t j = seen_equals_index; j < str_len; j++)
+    {
+        if (isalnum(str[j]) || str[j] == '.' || str[j] == '+' || str[j] == '-')
+        {
+            substring[i] = str[j];
+            i++;
+        }
+    }
+
+    return substring;
+}
+
+/**
+ * @brief Extracts a double floating-point value from a parameter file line
+ * @param[in] buff String to slice and extract value from
+ * @param[in] accept_fun Function to test if value is to be accepted
+ * @param[out] val Pointer to value to set
+ * @returns 0 is successful, -1 otherwise
+ */
+static int extract_double_param(
+    const char* buff,
+    accept_val_t accept_fun,
+    double* val)
+{
+    if (buff == NULL)
+    {
+        fputs("extract_double_param: buff cannot be null\n", stderr);
+        return -1;
+    } else if (val == NULL) {
+        fputs("extract_double_param: val cannot be null\n", stderr);
+        return -1;
+    }
+    
+    // Attempt to parse start time string
+    size_t str_len = 0;
+    char* sub_str = get_postfix_substring(buff, &str_len);
+    if (sub_str == NULL)
+    {
+        fputs("read_params: failed to parse stime string\n", stderr);
+        return -1;
+    }
+    // Convert value to double
+    double temp = 0.0;
+    if (sscanf(sub_str, "%lf", &temp) != 1)
+    {
+        fputs("read_params: failed to convert stime value\n", stderr);
+        free(sub_str);
+        return -1;
+    } else if (accept_fun) {
+        // If accept function is non-NULL, run it and test parameter value
+        if (!accept_fun(&temp))
+        {
+            fprintf(stderr,
+                    "read_params: illegal value for parameter: %lf\n",
+                    temp);
+            free(sub_str);
+            return -1;
+        }
+    }
+    *val = temp;
+    free(sub_str);
+    return 0;
+}
+
+/**
+ * @brief Extracts an integer value from a parameter file line
+ * @param[in] buff String to slice and extract value from
+ * @param[in] accept_fun Function to test if value is to be accepted
+ * @param[out] val Pointer to value to set
+ * @returns 0 is successful, -1 otherwise
+ */
+static int extract_int_param(
+    const char* buff,
+    accept_val_t accept_fun,
+    int* val)
+{
+    if (buff == NULL)
+    {
+        fputs("extract_int_param: buff cannot be null\n", stderr);
+        return -1;
+    } else if (val == NULL) {
+        fputs("extract_int_param: val cannot be null\n", stderr);
+        return -1;
+    }
+    
+    // Attempt to parse start time string
+    size_t str_len = 0;
+    char* sub_str = get_postfix_substring(buff, &str_len);
+    if (sub_str == NULL)
+    {
+        fputs("extract_int_param: failed to parse stime string\n", stderr);
+        return -1;
+    }
+    // Convert value to int
+    int temp = 0.0;
+    if (sscanf(sub_str, "%d", &temp) != 1)
+    {
+        fputs("extract_int_param: failed to convert stime value\n", stderr);
+        free(sub_str);
+        return -1;
+    }  else if (accept_fun) {
+        // If accept function is non-NULL, run it and test parameter value
+        if (!accept_fun(&temp))
+        {
+            fprintf(stderr,
+                    "extract_int_param: illegal value for parameter: %i\n",
+                    temp);
+            free(sub_str);
+            return -1;
+        }
+    }
+    *val = temp;
+    free(sub_str);
+    return 0;
+}
+
+/**
+ * @brief Extracts a yes/no value from a parameter file line as a boolean
+ * @param[in] buff String to slice and extract value from
+ * @param[out] val Pointer to value to set
+ * @returns 0 is successful, -1 otherwise
+ */
+static int extract_yesno_param(const char* buff, bool* val)
+{
+    if (buff == NULL)
+    {
+        fputs("extract_yesno_param: buff cannot be null\n", stderr);
+        return -1;
+    } else if (val == NULL) {
+        fputs("extract_yesno_param: val cannot be null\n", stderr);
+        return -1;
+    }
+    
+    // Attempt to parse start time string
+    size_t str_len = 0;
+    char* sub_str = get_postfix_substring(buff, &str_len);
+    if (sub_str == NULL)
+    {
+        fputs("extract_yesno_param: failed to parse stime string\n", stderr);
+        return -1;
+    }
+
+    // Canary for if neither "yes" or "no" are found ;)
+    int tristate = -1;
+    // Detect if "yes" or "no" is present in the string
+    if (strstr(sub_str, "yes") || strstr(sub_str, "YES"))
+    {
+        tristate = 1;
+    } else if (strstr(sub_str, "no") || strstr(sub_str, "NO")) {
+        tristate = 0;
+    }
+    
+    if (tristate == -1)
+    {
+        fputs("extract_yesno_param: ", stderr);
+        return -1;
+    }
+
+    *val = (tristate) ? true : false;
+    free(sub_str);
+    return 0;
+}
+
+static enum SIMUL_ALGO algo_str_to_enum(const char* buff)
+{
+    // Attempt to parse algorithm string
+    size_t algo_str_len = 0;
+    const char* str = get_postfix_substring(buff, &algo_str_len);
+    if (str == NULL)
+    {
+        fputs("read_params: failed to parse algo type\n", stderr);
+        return -1;
+    }
+
+    if (strncmp("mvs", str, sizeof("mvs")) == 0)
+    {
+        return MVS_ALGO;
+    } else if (strncmp("bs2", str, sizeof("bs2")) == 0) {
+        return BS2_ALGO;
+    } else if (strncmp("hybrid", str, sizeof("hybrid")) == 0) {
+        return HYBRID_ALGO;
+    } else if (strncmp("radau", str, sizeof("radau")) == 0) {
+        return RADAU_ALGO;
+    } else if (strncmp("bs", str, sizeof("bs")) == 0) {
+        return BS_ALGO;
+    } else {
+        return -1;
+    }
+}
+
+//! Function that only accepts a double value if it is nonnegative and finite
+static bool accept_nonnegfin_double(void* val)
+{
+    const double *dval = (const double*) val;
+    return (val && isfinite(*dval) && *dval >= 0.00);
+}
+
+//! Function that only accepts an int value if it is positive and finite
+static bool accept_posfin_int(void* val)
+{
+    const int *ival = (const int*) val;
+    return (val && isfinite(*ival) && *ival > 0);
+}
+
+//! Function that only accepts a double value if it is positive and finite
+static bool accept_posfin_double(void* val)
+{
+    const double *dval = (const double*) val;
+    return (val && isfinite(*dval) && *dval > 0);
+}
+
+/**
  * @brief Reads files.in file and places result in input params
- * @param[out] 
+ * @param[out] infiles Input filenames
+ * @param[out] outfiles Output filenames
+ * @param[out] dumpfiles Dump filenames
  * @returns 0 if successful, or -1 if reading the file failed
  */
 static int cmio_in_read_files_in(
@@ -718,6 +952,461 @@ static FILE* cmio_in_open_info(const char (*info_filename)[80],
     return info_fp;
 }
 
+/**
+ * @brief Read parameter file values and updates the simulation data object
+ * @param[in] param_fname File name of the parameter file
+ * @param[in,out] simul_data Simulation data object to be updated
+ * @returns 0 if successful, -1 otherwise
+ */
+int cmio_read_params(const char (*param_fname)[80],
+                     cmercury_simul_data_t simul_data)
+{
+    if (simul_data == NULL)
+    {
+        fputs("cmio_read_params: invalid simulation data object", stderr);
+        return -1;
+    }
+    if (param_fname == NULL)
+    {
+        fputs("cmio_read_params: invalid information file name", stderr);
+        return -1;
+    }
+
+    // Try opening file
+    FILE *param_file = fopen(param_fname[0], "r");
+    if (param_file == NULL)
+    {
+        fprintf(stderr, "cmio_read_params: unable to read file %s\n", param_fname[0]);
+        return -1;
+    }
+
+    char buff[150] = {0};
+
+    // Read lines one by one into the provided buffers
+    int linum = 0;
+    while (fgets(buff, sizeof(buff), param_file) != NULL)
+    {
+        // Ignore comment lines
+        if (buff[0] == ')')
+        {
+            linum++;
+            continue;
+        }
+
+        // TODO:
+        
+        linum++;
+    }
+
+    // Check if we reached the end of the file or some other error occurred
+    if (!feof(param_file) && (ferror(param_file)))
+    {
+        perror("fgets()");
+        fprintf(stderr,"fgets() failed in at line #%d\n", linum);
+        linum = -1;
+    }
+    fclose(param_file);
+
+    return linum;
+}
+
+/**
+ * @brief Reads parameter file and returns a pointer to a parameter object
+ * @param[in] fname Name of the parameter file
+ * @returns Pointer to parameter object, or NULL if parameter parsing failed
+ */
+static simul_params_t read_params(const char* fname)
+{
+    if (fname == NULL)
+    {
+        fputs("read_params: invalid file name\n", stderr);
+        return NULL;        
+    }
+    FILE* simul_fp = fopen(fname, "r");
+    if (simul_fp == NULL)
+    {
+        fprintf(stderr, "read_params: unable to read file '%s': ", fname);
+        perror("");
+        return NULL;
+    }
+    
+    simul_params_t params = calloc(1, sizeof(struct simul_params));
+    if (params == NULL)
+    {
+        fputs("read_params: unable to allocate parameter object\n", stderr);
+        return NULL;
+    }
+
+    char buff[150] = {0};
+    size_t linum = 0, absolute_linum = 1;
+    while (fgets(buff, sizeof(buff), simul_fp) != NULL)
+    {
+        // Skip 'comment' lines without incrementing linum
+        if (buff[0] == ')' || (buff[0] == ' ' && buff[1] == '<'))
+        {
+            memset(buff, 0, sizeof(buff));
+            absolute_linum++;
+            continue;
+        }
+
+        // Relative number determines parameter set/changed, not text
+        switch (linum)
+        {
+        // Algorithm choice (encoded as a string)
+        case 0:
+        {
+            // Attempt to convert algorithm string into enum denoting type
+            int algo_i = -1;
+            if ((algo_i = algo_str_to_enum(buff)) < 0)
+            {
+                fputs("read_params: invalid algorithm choice\n", stderr);
+                goto fail_read_params;
+            }
+            params->algo = (enum SIMUL_ALGO) algo_i;
+            printf("read_params: algo is of type %i\n", algo_i);
+            break;
+        }
+        // Start time (in days)
+        case 1:
+        {
+            double stime = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &stime))
+            {
+                fputs("read_params: failed to read start time value\n", stderr);
+                goto fail_read_params;
+            }
+            params->simul_start = stime;
+            printf("read_params: start_time is %lf\n", stime);
+            break;
+        }
+        // Stop time (in days)
+        case 2:
+        {
+            double stime = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &stime))
+            {
+                fputs("read_params: failed to read stop time value\n", stderr);
+                goto fail_read_params;
+            }
+            if (stime < params->simul_start)
+            {
+                fprintf(stderr,
+                        "read_params: stop time (%lf) is in the past from start time (%lf)\n",
+                        stime, params->simul_start);
+                goto fail_read_params;
+            }
+            params->stop_time = stime;
+            printf("read_params: stop_time is %lf\n", stime);
+            break;
+        }
+        // Output interval (days)
+        case 3:
+        {
+            double out_interval = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &out_interval))
+            {
+                fputs("read_params: failed to read stop time value\n", stderr);
+                goto fail_read_params;
+            }
+            params->output_interval = out_interval;
+            printf("read_params: output_interval is %lf\n", out_interval);
+            break;
+        }
+        // Time step (days)
+        case 4:
+        {
+            int timestep = 0;
+            if (extract_int_param(buff, accept_posfin_int, &timestep))
+            {
+                fputs("read_params: failed to read stop time value\n", stderr);
+                goto fail_read_params;
+            }
+            params->timestep = timestep; 
+            printf("read_params: output_interval is %d\n", timestep);
+            break;
+        }
+        // Accuracy Parameter
+        case 5:
+        {
+            double acc = 0.0;
+            if (extract_double_param(buff, accept_posfin_double, &acc))
+            {
+                fputs("read_params: failed to read accuracy parameter\n", stderr);
+                goto fail_read_params;
+            }
+            params->accuracy_param = acc;
+            printf("read_params: accuracy parameter is %e\n", acc);
+            break;
+        }
+        // Option to stop integration after a close encounter
+        case 6:
+        {
+            bool stop_simul = false;
+            if (extract_yesno_param(buff, &stop_simul))
+            {
+                fputs("read_params: failed to read integration option\n", stderr);
+                goto fail_read_params;
+            }
+            params->encounter_stop = stop_simul;
+            printf("read_params: %s? %s\n",
+                   "stop integration after a close encounter",
+                   stop_simul ? "yes" : "no");
+            break;
+        }
+        // Option to allow collisions to occur
+        case 7:
+        {
+            bool allow_coll = false;
+            if (extract_yesno_param(buff, &allow_coll))
+            {
+                fputs("read_params: failed to read integration option\n", stderr);
+                goto fail_read_params;
+            }
+            params->allow_collisions = allow_coll;
+            printf("read_params: %s? %s\n",
+                   "allow collisions to occur",
+                   allow_coll ? "yes" : "no");
+            break;
+        }
+        // Option to include collisional fragmentation
+        case 8:
+        {
+            bool coll_frag = false;
+            if (extract_yesno_param(buff, &coll_frag))
+            {
+                fputs("read_params: failed to read integration option\n", stderr);
+                goto fail_read_params;
+            }
+            params->collisional_fragmentation = coll_frag;
+            printf("read_params: %s? %s\n",
+                   "include collisional fragmentation",
+                   coll_frag ? "yes" : "no");
+            break;
+        }
+        // Option to express time in days or years
+        case 9:
+        {
+            // Attempt to parse time format string
+            size_t str_len = 0;
+            char* sub_str = get_postfix_substring(buff, &str_len);
+            if (sub_str == NULL)
+            {
+                fputs("read_params: failed to parse time format\n", stderr);
+                goto fail_read_params;
+            }
+            // Detect if "years" or "days" is present in the string
+            if (strstr(sub_str, "years"))
+            {
+                params->time_in_years = true;
+            } else if (strstr(sub_str, "days")) {
+                params->time_in_years = false;
+            } else {
+                fprintf(stderr,
+                        "read_params: invalid value for time format: %s\n",
+                        sub_str);
+                goto fail_read_params;
+            }
+            printf("read_params: %s? %s\n",
+                   "express time in days or years",
+                   params->time_in_years ? "years" : "days");
+            break;
+        }
+        // Option to express time relative to integration start time
+        case 10:
+        {
+            bool relative = false;
+            if (extract_yesno_param(buff, &relative))
+            {
+                fputs("read_params: failed to read integration option\n", stderr);
+                goto fail_read_params;
+            }
+            params->time_relative_to_start = relative;
+            printf("read_params: %s? %s\n",
+                   "express time relative to integration start time",
+                   relative ? "yes" : "no");
+            break;
+        }
+        // Option for output precision
+        case 11:
+        {
+            // Attempt to parse output precision string
+            size_t str_len = 0;
+            char* sub_str = get_postfix_substring(buff, &str_len);
+            if (sub_str == NULL)
+            {
+                fputs("read_params: failed to parse output precision\n", stderr);
+                goto fail_read_params;
+            }
+            // Determine precision
+            enum SIMUL_PRECISION precision;
+            if (strstr(sub_str, "low"))
+            {
+                precision = LOW_PRECISION;
+            } else if (strstr(sub_str, "medium")) {
+                precision = MEDIUM_PRECISION;
+            } else if (strstr(sub_str, "high")) {
+                precision = HIGH_PRECISION;
+            } else {
+                fprintf(stderr,
+                        "read_params: invalid value for output precision: %s\n",
+                        sub_str);
+                goto fail_read_params;
+            }
+            params->precision = precision;
+            printf("read_params: precision? %d\n", precision);
+            break;
+        }
+        // Option to include relativity in integration
+        case 12:
+        {
+            printf("read_params: '%s' not yet implemented, ignored\n",
+                   "Include relativity in integration");
+            break;
+        }
+        // Option to include user-defined force
+        case 13:
+        {
+            bool user_forces = false;
+            if (extract_yesno_param(buff, &user_forces))
+            {
+                fputs("read_params: failed to read integration option\n", stderr);
+                goto fail_read_params;
+            }
+            params->use_user_force = user_forces;
+            printf("read_params: %s? %s\n",
+                   "express time relative to integration start time",
+                   user_forces ? "yes" : "no");
+            break;
+        }
+        // Ejection distance
+        case 14:
+        {
+            double dist = 0.0;
+            if (extract_double_param(buff, accept_posfin_double, &dist))
+            {
+                fputs("read_params: failed to read ejection distance\n", stderr);
+                goto fail_read_params;
+            }
+            params->ejection_distance_AU = dist;
+            printf("read_params: ejection distance is %e\n", dist);
+            break;
+        }
+        // Central body radius
+        case 15:
+        {
+            double radius = 0.0;
+            if (extract_double_param(buff, accept_posfin_double, &radius))
+            {
+                fputs("read_params: failed to read central body radius\n", stderr);
+                goto fail_read_params;
+            }
+            params->central_body_radius_AU = radius;
+            printf("read_params: central body radius is %e\n", radius);
+            break;
+        }
+        // Central body radius
+        case 16:
+        {
+            double c_mass = 0.0;
+            if (extract_double_param(buff, accept_posfin_double, &c_mass))
+            {
+                fputs("read_params: failed to read central body mass\n", stderr);
+                goto fail_read_params;
+            }
+            params->central_mass_solar = c_mass;
+            printf("read_params: central body mass is %e\n", c_mass);
+            break;
+        }
+        // Central body J2
+        case 17:
+        {
+            double j2 = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &j2))
+            {
+                fputs("read_params: failed to read central J2\n", stderr);
+                goto fail_read_params;
+            }
+            params->central_j2 = j2;
+            printf("read_params: central body J2 is %e\n", j2);
+            break;
+        }
+        // Central body J4
+        case 18:
+        {
+            double j4 = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &j4))
+            {
+                fputs("read_params: failed to read central J4\n", stderr);
+                goto fail_read_params;
+            }
+            params->central_j4 = j4;
+            printf("read_params: central body J4 is %e\n", j4);
+            break;
+        }
+        // Central body J6
+        case 19:
+        {
+            double j6 = 0.0;
+            if (extract_double_param(buff, accept_nonnegfin_double, &j6))
+            {
+                fputs("read_params: failed to read central J6\n", stderr);
+                goto fail_read_params;
+            }
+            params->central_j6 = j6;
+            printf("read_params: central body J6 is %e\n", j6);
+            break;
+        }
+        // Option to set hybrid integrator changeover
+        case 20:
+        {
+            printf("read_params: '%s' not yet implemented, ignored\n",
+                   "Hybrid integrator changeover");
+            break;
+        }
+        // Option to set number of timesteps between data dumps
+        case 21:
+        {
+            printf("read_params: '%s' not yet implemented, ignored\n",
+                   "Set number of timesteps between data dumps");
+            break;
+        }
+        // Option to set number of timesteps between data dumps
+        case 22:
+        {
+            printf("read_params: '%s' not yet implemented, ignored\n",
+                   "Set number of timesteps between periodic effects");
+            break;
+        }
+        default:
+        {
+            fprintf(stderr,
+                    "read_params: unrecognized parameter, skipping line %lu\n",
+                    absolute_linum);
+            break;
+        }
+        }
+
+        absolute_linum++;
+        linum++;
+    }
+
+    // Test reason for reaching NULL
+    if (!feof(simul_fp) && ferror(simul_fp))
+    {
+        perror("read_params: fgets()");
+fail_read_params:
+        fprintf(stderr,
+                "read_params: failed reading param file at line %lu\n",
+                absolute_linum);
+        free(params);
+        fclose(simul_fp);
+        return NULL;
+    }
+
+    fclose(simul_fp);
+    return params;
+}
+
 int cmio_in(cmercury_simul_data_t simul_data)
 {
     if (simul_data == NULL)
@@ -728,11 +1417,9 @@ int cmio_in(cmercury_simul_data_t simul_data)
 
     int itmp,jtmp,informat,lim[10][2],nsub,year,month,lineno;
     double q,a,e,i,p,n,l,temp,tmp2,tmp3,rhocgs,t1,tmp4,tmp5,tmp6;
-
     bool test,oldflag,flag1,flag2;
     char c1;
     char c3[3] = {0}, alg[60][3];
-
     char filename[80] = {0}, c80[80] = {0};
     char string[150] = {0};
     
@@ -755,7 +1442,7 @@ int cmio_in(cmercury_simul_data_t simul_data)
         return -1;
     }
 
-    // Try to open both the restart file or the info file
+    // Try to open the info file, if it exists, or create it if it doesn't
     FILE *info_fp = cmio_in_open_info((const char (*)[80]) &outfiles[2],
                                       (const char (*)[80]) &dumpfiles[3]);
     if (info_fp == NULL)
@@ -764,7 +1451,16 @@ int cmio_in(cmercury_simul_data_t simul_data)
         return -1;
     }
 
+    // Read integration parameters
+    simul_params_t params = read_params(infiles[2]);
+    if (params == NULL)
+    {
+        fputs("cmio_in: failed to parse parameter file\n", stderr);
+        fclose(info_fp);
+        return -1;
+    }
+    free(params);
+
     fclose(info_fp);
-    
     return 0;
 }

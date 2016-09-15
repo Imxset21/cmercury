@@ -1,16 +1,19 @@
 ## Synopsis
 
-A simple C99 rewrite of the original Mercury software initially created by John E. Chambers.
-It is the NBody integrator based on Bulirsh-Stoer, Everhart and other methods.
+A simple C99 rewrite of the original Mercury software initially
+created by John E. Chambers. It is the NBody integrator based on
+Bulirsh-Stoer, Everhart and other methods. 
 
 ## Building
 
-Building requires `gcc (version 4.8+)` and `make`. Once installed, open a shell and type:
+Building requires `gcc (version 4.8+)` and `make`. Once downloaded,
+open a shell in the directory and type:
 ```
 make all
 ```
 
-A libmercury.so file will be produced.
+A libmercury.so file will be produced. Warning: this is non-portable
+(specific to your platform) by default!
 
 ## Tests
 
